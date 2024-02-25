@@ -919,14 +919,22 @@ namespace popl
         return nullptr;
     }
 
+    //inline Option_ptr OptionParser::find_option(char short_name) const
+    //{
+    //    for (const auto& option : options_)
+    //        if (option->short_name() == short_name)
+    //            return option;
+    //    return nullptr;
+    //}
+
+    // ryusukef: Do case insensitive comparison
     inline Option_ptr OptionParser::find_option(char short_name) const
     {
         for (const auto& option : options_)
-            if (option->short_name() == short_name)
+            if (std::tolower(option->short_name()) == std::tolower(short_name))
                 return option;
         return nullptr;
     }
-
 
     template <typename T>
     inline std::shared_ptr<T> OptionParser::get_option(const std::string& long_name) const

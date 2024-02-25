@@ -15,12 +15,27 @@ IAsyncOperation<WebTokenRequestResult> InvokeRequestTokenAsync(WebTokenRequest& 
 HWND CreateAnchorWindow();
 void PrintWebTokenResponse(const WebTokenResponse& response);
 void PrintProviderError(const WebTokenRequestResult& result);
+void PrintVersion();
 
 int main(int argc, char** argv)
 {
     std::ios_base::sync_with_stdio(false);
 
-    const auto option = Option{argc, argv};
+    PrintVersion();
+    std::println("");
+
+    auto option = Option{};
+
+    try 
+    {
+        option.Parse(argc, argv);
+
+    }
+    catch (const std::exception& e)
+    {
+        std::println("Failed to parse the input options. Please check the avaialble options with -h or -? switch");
+        return 1;
+    }
 
     if (option.Help())
     {
@@ -228,17 +243,12 @@ void PrintWebTokenResponse(const WebTokenResponse& response)
     }
 }
 
-void PrintProviderError(const WebProviderError& providerError)
-{
-    std::println("ErrorCode: {:#x}, ErrorMessage: {}", static_cast<std::uint32_t>(providerError.ErrorCode()), winrt::to_string(providerError.ErrorMessage()));
-}
-
 void PrintProviderError(const WebTokenRequestResult& result)
 {
     // ResponseError might be null (e.g. when status is WebTokenRequestStatus::UserCancel)
-    if (auto error = result.ResponseError())
+    if (const auto& error = result.ResponseError())
     {
-        PrintProviderError(error);
+        std::println("ErrorCode: {:#x}, ErrorMessage: {}", static_cast<std::uint32_t>(error.ErrorCode()), winrt::to_string(error.ErrorMessage()));
     }
 }
 
@@ -299,6 +309,29 @@ HWND CreateAnchorWindow()
     }
 
     return hwnd;
+}
+
+/// <summary>
+/// Print file name and vesrion
+/// </summary>
+void PrintVersion()
+{
+    // Get this executable file name
+    static const auto exeName = []() {
+        auto exePath = std::string(MAX_PATH, 0);
+        auto cch = GetModuleFileNameA(nullptr, exePath.data(), static_cast<DWORD>(exePath.size()));
+        exePath.resize(cch);
+        return exePath.substr(exePath.rfind('\\') + 1);
+    }();
+
+    static const auto version = []() {
+        auto exePath = std::array<wchar_t, MAX_PATH>{};
+        GetModuleFileNameW(nullptr, exePath.data(), static_cast<DWORD>(exePath.size()));
+        auto version = Util::GetFileVersion(exePath.data());
+        return Util::to_string(version.value_or(L""));
+    }();
+
+    std::println("{} (version {})", exeName, version);
 }
 
 // refs:

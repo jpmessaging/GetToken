@@ -7,7 +7,6 @@ using namespace Windows::Foundation;
 using namespace Windows::Security::Credentials;
 using namespace Windows::Security::Authentication::Web::Core;
 
-
 namespace Util::details
 {
     // Maps to convert some enums to strings
@@ -43,22 +42,22 @@ namespace Util::details
 
 namespace Util
 {
-    inline std::string to_string(WebAccountState accountState)
+    inline std::string to_string(WebAccountState accountState) noexcept
     {
         return details::WebAccountStateMap.at(accountState);
     }
 
-    inline std::string to_string(FindAllWebAccountsStatus status)
+    inline std::string to_string(FindAllWebAccountsStatus status) noexcept
     {
         return details::FindAllWebAccountsStatusMap.at(status);
     }
 
-    inline std::string to_string(WebTokenRequestStatus status)
+    inline std::string to_string(WebTokenRequestStatus status) noexcept
     {
         return details::WebTokenRequestStatusMap.at(status);
     }
 
-    inline std::string to_string(std::wstring_view str)
+    inline std::string to_string(std::wstring_view str) noexcept
     {
         if (str.empty())
         {
@@ -72,7 +71,7 @@ namespace Util
         return utf8;
     }
 
-    inline std::wstring to_wstring(std::string_view str)
+    inline std::wstring to_wstring(std::string_view str) noexcept
     {
         if (str.empty())
         {
@@ -84,5 +83,43 @@ namespace Util
         ::MultiByteToWideChar(CP_ACP, 0, str.data(), static_cast<int>(str.size()), wstr.data(), cch);
 
         return wstr;
+    }
+
+    /// <summary>
+    /// Get file version as std::wstring
+    /// </summary>
+    /// <param name="filePath">Path to the file</param>
+    /// <returns>version string as std::optional</returns>
+    std::optional<std::wstring> GetFileVersion(const wchar_t* filePath) noexcept
+    {
+        const auto size = ::GetFileVersionInfoSize(filePath, nullptr);
+
+        if (size == 0) {
+            OutputDebugStringW(std::format(L"GetFileVersionInfoSize failed with {}\n", GetLastError()).c_str());
+            return {};
+        }
+
+        const auto pData = std::make_unique<BYTE[]>(size);
+
+        if (!::GetFileVersionInfoW(filePath, 0, size, pData.get()))
+        {
+            OutputDebugStringW(std::format(L"GetFileVersionInfoW failed with {}\n", GetLastError()).c_str());
+            return {};
+        }
+
+        VS_FIXEDFILEINFO* pFileInfo{};
+        auto fileInfoSize = UINT{};
+
+        if (!VerQueryValue(pData.get(), L"\\", (LPVOID*)&pFileInfo, &fileInfoSize))
+        {
+            OutputDebugStringW(std::format(L"VerQueryValue failed with {}\n", GetLastError()).c_str());
+            return {};
+        }
+
+        const auto major = (pFileInfo->dwFileVersionMS >> 16) & 0xffff;
+        const auto minor = pFileInfo->dwFileVersionMS & 0xffff;
+        const auto revision = (pFileInfo->dwFileVersionLS >> 16) & 0xffff;
+
+        return std::format(L"{}.{}.{}", major, minor, revision);
     }
 }

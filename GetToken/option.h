@@ -9,7 +9,7 @@
 class Option
 {
 public:
-    Option(int argc, char** argv) :
+    explicit Option() :
         m_parser{ "Available options" },
         m_help{ m_parser.add<popl::Switch>("h", "help", "Show this help message") },
         m_helpAlias{ m_parser.add<popl::Switch>("?", "", "Show this help message") },
@@ -17,6 +17,9 @@ public:
         m_clientId{ m_parser.add<popl::Value<std::string>>("c", "clientid", std::format("Client ID. Default: {}", Util::to_string(WAM::ClientId::MSOFFICE))) },
         m_scopes{ m_parser.add<popl::Value<std::string>>("", "scopes", std::format(R"(requested scopes of the token. Default: "{}")", Util::to_string(WAM::Scopes::DEFAULT_SCOPES))) },
         m_properties { m_parser.add<popl::Value<std::string>>("p", "property", "Request property (e.g., longin_hint=user01@example.com, prompt=login)") }
+    { /* empty */ }
+
+    Option(int argc, char** argv) : Option()
     {
         m_parser.parse(argc, argv);
     }
@@ -29,14 +32,19 @@ public:
     Option(Option&&) = default;
     Option& operator=(Option&&) = default;
 
-    const auto& UnknownOptions() const
+    void Parse(int argc, char** argv)
+    {
+        m_parser.parse(argc, argv);
+    }
+
+    const auto& UnknownOptions() const noexcept
     {
         return m_parser.unknown_options();
     }
 
-    auto Help() const
+    auto Help() const noexcept
     {
-        return m_help->value() || m_helpAlias->value();
+        return m_help->value() || m_helpAlias->value(); 
     }
 
     auto SignOut() const
@@ -44,7 +52,7 @@ public:
         return m_signOut->value();
     }
 
-    const std::optional<std::wstring>& ClientId() const
+    const std::optional<std::wstring>& ClientId() const noexcept
     {
         static auto value = [this]() -> std::optional<std::wstring> {
             if (m_clientId->is_set())
@@ -58,7 +66,7 @@ public:
         return value;
     }
 
-    const std::optional<std::wstring>& Scopes() const
+    const std::optional<std::wstring>& Scopes() const noexcept
     {
         static auto value = [this]() -> std::optional<std::wstring> {
             if (m_scopes->is_set())
@@ -72,12 +80,12 @@ public:
         return value;
     }
 
-    const std::unordered_map<std::wstring, const std::wstring>& Properties() const
+    const std::unordered_map<std::wstring, std::wstring>& Properties() const
     {
         // Parse properties and put them in a map
         // Property value should look like "key=value"
-        static auto value = [this]() -> std::unordered_map<std::wstring, const std::wstring> {
-            auto map = std::unordered_map<std::wstring, const std::wstring>{ m_properties->count() };
+        static auto value = [this]() -> std::unordered_map<std::wstring, std::wstring> {
+            auto map = std::unordered_map<std::wstring, std::wstring>{ m_properties->count() };
 
             for (int i = 0; i < m_properties->count(); ++i)
             {
@@ -98,7 +106,7 @@ public:
         return value;
     }
 
-    void PrintHelp() const
+    void PrintHelp() const noexcept
     {
         // Get this executable file name
         static const auto exeName = []() {
@@ -108,23 +116,27 @@ public:
             return exePath.substr(exePath.rfind('\\') + 1);
         }();
 
-        std::println("{}", m_parser.help());
-        std::println("Note: All options are case insensitive\n");
+        std::print("{}", m_parser.help());
 
-        std::println("Example 1: {}", exeName);
-        std::println("Run with default configurations\n");
+        std::println(R"(
+Note: All options are case insensitive.
 
-        std::println("Example 2: {} --property login_hint=user01@example.com --property prompt=login --property resource=https://graph.windows.net", exeName);
-        std::println("Add the given properties to the request\n");
+Example 1: {0}
+Run with default configurations
 
-        std::println("Example 3: {} -p login_hint=user01@example.com -p prompt=login -p resource=https://graph.windows.net", exeName);
-        std::println("Same as Example 2, using the short option name -p\n");
+Example 2: {0} --property login_hint=user01@example.com --property prompt=login --property resource=https://graph.windows.net
+Add the given properties to the request
 
-        std::println("Example 4: {} --scopes open_id profiles", exeName);
-        std::println("Use the given scopes for the token\n");
+Example 3: {0} -p login_hint=user01@example.com -p prompt=login -p resource=https://graph.windows.net
+Same as Example 2, using the short option name -p
 
-        std::println("Example 5: {} --signout", exeName);
-        std::println("Sign out from all web accounts before making token requests\n");
+Example 4: {0} --scopes open_id profiles
+Use the given scopes for the token
+
+Example 5: {0} --signout
+Sign out from all web accounts before making token requests
+)", exeName);
+
     }
 
 private:
