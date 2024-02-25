@@ -107,6 +107,7 @@
     <ClInclude Include="option.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="popl.hpp" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="util.h" />
     <ClInclude Include="wam.h" />
   </ItemGroup>
@@ -119,6 +120,9 @@
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="PropertySheet.props" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="GetToken.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
