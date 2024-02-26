@@ -1,8 +1,9 @@
 ﻿#include "pch.h"
 
-#include "wam.h"
-#include "util.h"
+#include "console.h"
 #include "option.h"
+#include "util.h"
+#include "wam.h"
 
 using namespace Windows::Foundation;
 using namespace Windows::Security::Credentials;
@@ -15,14 +16,19 @@ IAsyncOperation<WebTokenRequestResult> InvokeRequestTokenAsync(WebTokenRequest& 
 HWND CreateAnchorWindow();
 void PrintWebTokenResponse(const WebTokenResponse& response);
 void PrintProviderError(const WebTokenRequestResult& result);
-void PrintVersion();
+void PrintBanner();
+
+namespace ConsoleFormat
+{
+    constexpr auto Error = { Console::Format::ForegroundRed, Console::Format::Bright };
+    constexpr auto Warning = { Console::Format::ForegroundYellow, Console::Format::Bright };
+    constexpr auto Verbose = { Console::Format::ForegroundCyan };
+}
 
 int main(int argc, char** argv)
 {
     std::ios_base::sync_with_stdio(false);
-
-    PrintVersion();
-    std::println("");
+    PrintBanner();
 
     auto option = Option{};
 
@@ -33,7 +39,7 @@ int main(int argc, char** argv)
     }
     catch (const std::exception& e)
     {
-        std::println("Failed to parse the input options. Please check the avaialble options with -h or -? switch");
+        Console::WriteLine("Failed to parse the input options. Please check the avaialble options with -h or -? switch", ConsoleFormat::Error);
         return 1;
     }
 
@@ -45,14 +51,14 @@ int main(int argc, char** argv)
 
     if (option.UnknownOptions().size()) 
     {
-        std::println("Unknown options are found:");
+        Console::WriteLine("Unknown options are found:", ConsoleFormat::Error);
 
         for (const auto& opt : option.UnknownOptions())
         {
             std::println("{}", opt);
         }
-        
-        std::println("\nPlease check the avaialble options with --help (-h or -?)");
+
+        Console::WriteLine("\nPlease check the avaialble options with --help (-h or -?)", ConsoleFormat::Error);
         return 0;
     }
 
@@ -90,12 +96,18 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
 
     if (!provider)
     {
-        std::println(std::cerr, R"(FindAccountProviderAsync failed to find Provider "{}")", winrt::to_string(WAM::ProviderId::MICROSOFT));
+        Console::WriteLine(std::format(R"(FindAccountProviderAsync failed to find Provider "{}")", winrt::to_string(WAM::ProviderId::MICROSOFT)), ConsoleFormat::Error);
+        //std::println(std::cerr, R"(FindAccountProviderAsync failed to find Provider "{}")", winrt::to_string(WAM::ProviderId::MICROSOFT));
         co_return 1;
     }
 
-    std::println("Provider Id: {}, DisplayName: {}", winrt::to_string(provider.Id()), winrt::to_string(provider.DisplayName()));
-    std::println("");
+    Console::WriteLine("Provider:");
+    Console::WriteLine(std::format("  ID: {}", winrt::to_string(provider.Id())));
+    Console::WriteLine(std::format(R"(  DisplayName: "{}")", winrt::to_string(provider.DisplayName())));
+    Console::WriteLine("");
+
+    /*std::println("Provider Id: {}, DisplayName: {}", winrt::to_string(provider.Id()), winrt::to_string(provider.DisplayName()));
+    std::println("");*/
 
     /*
     * Find Web Accounts
@@ -107,12 +119,21 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
 
     if (accountsStatus != FindAllWebAccountsStatus::Success)
     {
-        std::println(std::cerr, "FindAllAccountsAsync failed with {}", Util::to_string(accountsStatus));
+        Console::WriteLine(std::format("FindAllAccountsAsync failed with {}", Util::to_string(accountsStatus)), ConsoleFormat::Error);
+        //std::println(std::cerr, "FindAllAccountsAsync failed with {}", Util::to_string(accountsStatus));
         co_return 1;
     }
 
     auto accounts = findResults.Accounts();
-    std::println("Found {} account(s)", accounts.Size());
+    if (accounts.Size() == 0)
+    {
+        Console::WriteLine("No accounts were found");
+    }
+    else
+    {
+        Console::WriteLine(std::format("Found {} web account(s):", accounts.Size()));
+        //std::println("Found {} account(s)", accounts.Size());
+    }
 
     for (const auto& account : accounts)
     {
@@ -125,7 +146,8 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
 
         if (option.SignOut())
         {
-            std::println("\n  Signing out from this account ... ");
+            Console::WriteLine("Signing out from this account ... ", ConsoleFormat::Warning);
+            //std::println("\n  Signing out from this account ... ");
             account.SignOutAsync().get();
         }
     }
@@ -137,14 +159,16 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     */
     try
     {
-        std::println("Invoking WebAuthenticationCoreManager::GetTokenSilentlyAsync ...");
+        Console::WriteLine("Invoking WebAuthenticationCoreManager::GetTokenSilentlyAsync ...\n", ConsoleFormat::Verbose);
+        //std::println("Invoking WebAuthenticationCoreManager::GetTokenSilentlyAsync ...");
 
         auto request = GetWebTokenRequest(provider, WebTokenRequestPromptType::Default, option);
 
         const auto& requestResult = co_await WebAuthenticationCoreManager::GetTokenSilentlyAsync(request);
 
         const auto requestStatus = requestResult.ResponseStatus();
-        std::println(std::cerr, "GetTokenSilentlyAsync returned {}", Util::to_string(requestStatus));
+        Console::WriteLine(std::format("GetTokenSilentlyAsync returned {}\n", Util::to_string(requestStatus)));
+        //std::println(std::cerr, "GetTokenSilentlyAsync returned {}", Util::to_string(requestStatus));
 
         if (requestStatus == WebTokenRequestStatus::Success)
         {
@@ -158,14 +182,16 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     catch (const winrt::hresult_error& e)
     {
         // https://learn.microsoft.com/en-us/windows/uwp/cpp-and-winrt-apis/error-handling
-        std::println(std::cerr, "GetTokenSilentlyAsync failed with an exception. code:{:#x}, message:{}", static_cast<std::uint32_t>(e.code().value), winrt::to_string(e.message()));
+        Console::WriteLine(std::format("GetTokenSilentlyAsync failed with an exception. code:{:#x}, message:{}", static_cast<std::uint32_t>(e.code().value), winrt::to_string(e.message())), ConsoleFormat::Error);
+        //std::println(std::cerr, "GetTokenSilentlyAsync failed with an exception. code:{:#x}, message:{}", static_cast<std::uint32_t>(e.code().value), winrt::to_string(e.message()));
     }
 
     std::println("");
 
     try
     {
-        std::println("Invoking WebAuthenticationCoreManager::RequestTokenAsync() ...");
+        Console::WriteLine("Invoking WebAuthenticationCoreManager::RequestTokenAsync() ...\n", ConsoleFormat::Verbose);
+        //std::println("Invoking WebAuthenticationCoreManager::RequestTokenAsync() ...");
 
         // Use ForceAuthentication here to show UI regardless of auth state.
         auto request = GetWebTokenRequest(provider, WebTokenRequestPromptType::ForceAuthentication, option);
@@ -173,11 +199,17 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         const auto& requestResult = co_await InvokeRequestTokenAsync(request, hwnd);
 
         auto requestStatus = requestResult.ResponseStatus();
-        std::println("RequestTokenAsync returned {}", Util::to_string(requestStatus));
+
+        Console::WriteLine(std::format("RequestTokenAsync returned {}\n", Util::to_string(requestStatus)));
+        //std::println("RequestTokenAsync returned {}", Util::to_string(requestStatus));
 
         if (requestStatus == WebTokenRequestStatus::Success)
         {
             PrintWebTokenResponse(requestResult.ResponseData().GetAt(0));
+        }
+        else if (requestStatus == WebTokenRequestStatus::UserCancel)
+        {
+            Console::WriteLine("User canceled the request", ConsoleFormat::Warning);
         }
         else
         {
@@ -186,7 +218,8 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     }
     catch (const winrt::hresult_error& e)
     {
-        std::println(std::cerr, "RequestTokenAsync failed with an exception. code:{:#x}, message:{}", static_cast<std::uint32_t>(e.code().value), winrt::to_string(e.message()));
+        Console::WriteLine(std::format("RequestTokenAsync failed with an exception. code:{:#x}, message:{}", static_cast<std::uint32_t>(e.code().value), winrt::to_string(e.message())), ConsoleFormat::Error);
+        // std::println(std::cerr, "RequestTokenAsync failed with an exception. code:{:#x}, message:{}", static_cast<std::uint32_t>(e.code().value), winrt::to_string(e.message()));
     }
 }
 
@@ -226,7 +259,6 @@ IAsyncOperation<WebTokenRequestResult> InvokeRequestTokenAsync(WebTokenRequest& 
 
 void PrintWebTokenResponse(const WebTokenResponse& response)
 {
-    //std::println("  WebAccount Id:{}\n  Token: {}", winrt::to_string(response.WebAccount().Id()), winrt::to_string(response.Token()));
     std::println("  WebAccount Id:{}", winrt::to_string(response.WebAccount().Id()));
     std::println("  WebTokenResponse Properties:\n");
 
@@ -239,7 +271,8 @@ void PrintWebTokenResponse(const WebTokenResponse& response)
 
     if (provError)
     {
-        std::println("ErrorCode: {:#x}, ErrorMessage: {}", static_cast<std::uint32_t>(provError.ErrorCode()), winrt::to_string(provError.ErrorMessage()));
+        Console::WriteLine(std::format("ErrorCode: {:#x}, ErrorMessage: {}", static_cast<std::uint32_t>(provError.ErrorCode()), winrt::to_string(provError.ErrorMessage())), ConsoleFormat::Error);
+        //std::println("ErrorCode: {:#x}, ErrorMessage: {}", static_cast<std::uint32_t>(provError.ErrorCode()), winrt::to_string(provError.ErrorMessage()));
     }
 }
 
@@ -248,7 +281,8 @@ void PrintProviderError(const WebTokenRequestResult& result)
     // ResponseError might be null (e.g. when status is WebTokenRequestStatus::UserCancel)
     if (const auto& error = result.ResponseError())
     {
-        std::println("ErrorCode: {:#x}, ErrorMessage: {}", static_cast<std::uint32_t>(error.ErrorCode()), winrt::to_string(error.ErrorMessage()));
+        Console::WriteLine(std::format("ErrorCode: {:#x}, ErrorMessage: {}", static_cast<std::uint32_t>(error.ErrorCode()), winrt::to_string(error.ErrorMessage())), ConsoleFormat::Error);
+        //std::println("ErrorCode: {:#x}, ErrorMessage: {}", static_cast<std::uint32_t>(error.ErrorCode()), winrt::to_string(error.ErrorMessage()));
     }
 }
 
@@ -314,9 +348,9 @@ HWND CreateAnchorWindow()
 /// <summary>
 /// Print file name and vesrion
 /// </summary>
-void PrintVersion()
+void PrintBanner()
 {
-    // Get this executable file name
+    //Get this executable file name & version
     static const auto exeName = []() {
         auto exePath = std::string(MAX_PATH, 0);
         auto cch = GetModuleFileNameA(nullptr, exePath.data(), static_cast<DWORD>(exePath.size()));
@@ -331,7 +365,9 @@ void PrintVersion()
         return Util::to_string(version.value_or(L""));
     }();
 
-    std::println("{} (version {})", exeName, version);
+    //std::println("{} (version {})", exeName, version);
+    Console::WriteLine(std::format("{} (version {})", exeName, version), ConsoleFormat::Verbose);
+    Console::WriteLine("");
 }
 
 // refs:

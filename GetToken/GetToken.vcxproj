@@ -106,6 +106,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="console.h" />
     <ClInclude Include="option.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="popl.hpp" />

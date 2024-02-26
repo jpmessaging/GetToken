@@ -1,6 +1,9 @@
 #pragma once
 #include "pch.h"
+
+// #include "console.h"
 #include "util.h"
+#include "wam.h"
 
 #define WINDOWS
 #include "popl.hpp"
@@ -117,6 +120,15 @@ public:
         }();
 
         std::print("{}", m_parser.help());
+
+        //Console::Write("\nNote: All options are case ");
+        //Console::WriteLine("insensitive.", Console::Format::ForegroundRed);
+        //Console::WriteLine("Example 1:");
+        //Console::WriteLine(std::format("{}", exeName), Console::Format::ForegroundCyan, Console::Format::Bright);
+        //Console::WriteLine("Run with default configurations\n");
+
+        //Console::WriteLine("Example 2:");
+        //Console::WriteLine(std::format("{0} --property login_hint=user01@example.com --property prompt=login --property resource=https://graph.windows.net", exeName), Console::Format::ForegroundCyan, Console::Format::Bright);
 
         std::println(R"(
 Note: All options are case insensitive.
