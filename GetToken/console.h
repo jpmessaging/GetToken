@@ -40,12 +40,39 @@ namespace Console
         }
 
         auto mode = DWORD{};
-        if (GetConsoleMode(hStdOut, &mode))
+
+        if (!GetConsoleMode(hStdOut, &mode))
         {
             return false;
         }
 
         if (!SetConsoleMode(hStdOut, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Enable Virtual Terminal
+    /// </summary>
+    /// <returns>bool true if successful</returns>
+    inline bool DisableVirtualTerminal()
+    {
+        auto hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+
+        if (hStdOut == INVALID_HANDLE_VALUE)
+        {
+            return false;
+        }
+
+        auto mode = DWORD{};
+
+        if (!GetConsoleMode(hStdOut, &mode))
+        {
+            return false;
+        }
+
+        if (!SetConsoleMode(hStdOut, mode & ~ENABLE_VIRTUAL_TERMINAL_PROCESSING))
         {
             return false;
         }

@@ -122,4 +122,12 @@ namespace Util
 
         return std::format(L"{}.{}.{}", major, minor, revision);
     }
+
+    template <std::invocable F>
+    struct DtorAction
+    {
+        [[nodiscard]] explicit DtorAction(F f) : action{ f } {}
+        ~DtorAction() { action(); };
+        F action;
+    };
 }

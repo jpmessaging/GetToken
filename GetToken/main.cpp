@@ -28,6 +28,8 @@ namespace ConsoleFormat
 int main(int argc, char** argv)
 {
     std::ios_base::sync_with_stdio(false);
+    Console::EnableVirtualTerminal();
+
     PrintBanner();
 
     auto option = Option{};
@@ -65,6 +67,9 @@ int main(int argc, char** argv)
     winrt::init_apartment();
 
     // RequestTokenAsync() needs to run on a UI thread
+    // Note: I could simply use the console window:
+    //   auto hwnd = GetAncestor(GetConsoleWindow(), GA_ROOTOWNER);
+    // However, use a new invisible window for more control.
     auto hwnd = CreateAnchorWindow();
 
     // This anchor window does not have to be visible for WAM to show its window.
@@ -125,6 +130,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     }
 
     auto accounts = findResults.Accounts();
+
     if (accounts.Size() == 0)
     {
         Console::WriteLine("No accounts were found");
@@ -135,9 +141,13 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         //std::println("Found {} account(s)", accounts.Size());
     }
 
+    // Print account properties
     for (const auto& account : accounts)
     {
         std::println("");
+        std::println("  ID: {}", winrt::to_string(account.Id()));
+        std::println("  State: {}", Util::to_string(account.State()));
+        std::println("  Properties:");
 
         for (const auto& [key, value] : account.Properties())
         {
@@ -165,8 +175,8 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         auto request = GetWebTokenRequest(provider, WebTokenRequestPromptType::Default, option);
 
         const auto& requestResult = co_await WebAuthenticationCoreManager::GetTokenSilentlyAsync(request);
-
         const auto requestStatus = requestResult.ResponseStatus();
+
         Console::WriteLine(std::format("GetTokenSilentlyAsync returned {}\n", Util::to_string(requestStatus)));
         //std::println(std::cerr, "GetTokenSilentlyAsync returned {}", Util::to_string(requestStatus));
 
@@ -197,7 +207,6 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         auto request = GetWebTokenRequest(provider, WebTokenRequestPromptType::ForceAuthentication, option);
 
         const auto& requestResult = co_await InvokeRequestTokenAsync(request, hwnd);
-
         auto requestStatus = requestResult.ResponseStatus();
 
         Console::WriteLine(std::format("RequestTokenAsync returned {}\n", Util::to_string(requestStatus)));
