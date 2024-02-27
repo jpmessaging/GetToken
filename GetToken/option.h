@@ -19,7 +19,8 @@ public:
         m_signOut{ m_parser.add<popl::Switch>("", "signout", "sign out of Web Accounts") },
         m_clientId{ m_parser.add<popl::Value<std::string>>("c", "clientid", std::format("Client ID. Default: {}", Util::to_string(WAM::ClientId::MSOFFICE))) },
         m_scopes{ m_parser.add<popl::Value<std::string>>("", "scopes", std::format(R"(requested scopes of the token. Default: "{}")", Util::to_string(WAM::Scopes::DEFAULT_SCOPES))) },
-        m_properties { m_parser.add<popl::Value<std::string>>("p", "property", "Request property (e.g., longin_hint=user01@example.com, prompt=login)") }
+        m_properties{ m_parser.add<popl::Value<std::string>>("p", "property", "Request property (e.g., longin_hint=user01@example.com, prompt=login)") },
+        m_tracePath{ m_parser.add<popl::Value<std::string>>("t", "tracepath", "Folder path for a trace file") }
     { /* empty */ }
 
     Option(int argc, char** argv) : Option()
@@ -109,6 +110,22 @@ public:
         return value;
     }
 
+    const std::optional<std::wstring>& TracePath() const noexcept
+    {
+        static auto value = [this]() {
+            auto value = std::optional<std::wstring>{};
+
+            if (m_tracePath->is_set())
+            {
+                value = Util::to_wstring(m_tracePath->value());
+            }
+
+            return value;
+        }();
+
+        return value;
+    }
+
     void PrintHelp() const noexcept
     {
         // Get this executable file name
@@ -120,15 +137,6 @@ public:
         }();
 
         std::print("{}", m_parser.help());
-
-        //Console::Write("\nNote: All options are case ");
-        //Console::WriteLine("insensitive.", Console::Format::ForegroundRed);
-        //Console::WriteLine("Example 1:");
-        //Console::WriteLine(std::format("{}", exeName), Console::Format::ForegroundCyan, Console::Format::Bright);
-        //Console::WriteLine("Run with default configurations\n");
-
-        //Console::WriteLine("Example 2:");
-        //Console::WriteLine(std::format("{0} --property login_hint=user01@example.com --property prompt=login --property resource=https://graph.windows.net", exeName), Console::Format::ForegroundCyan, Console::Format::Bright);
 
         std::println(R"(
 Note: All options are case insensitive.
@@ -160,5 +168,6 @@ private:
     std::shared_ptr<const popl::Value<std::string>> m_clientId;
     std::shared_ptr<const popl::Value<std::string>> m_scopes;
     std::shared_ptr<const popl::Value<std::string>> m_properties;
+    std::shared_ptr<const popl::Value<std::string>> m_tracePath;
 };
 

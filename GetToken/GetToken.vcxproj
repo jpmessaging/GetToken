@@ -111,6 +111,7 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="popl.hpp" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="trace.h" />
     <ClInclude Include="util.h" />
     <ClInclude Include="wam.h" />
   </ItemGroup>

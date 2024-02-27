@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <expected>
 #include <filesystem>
 #include <format>
 #include <iostream>
@@ -25,4 +26,5 @@
 #include <optional>
 #include <print>
 #include <string>
+#include <string_view>
 #include <system_error>

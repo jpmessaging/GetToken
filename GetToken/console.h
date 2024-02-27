@@ -1,7 +1,9 @@
 #pragma once
 
-#include <string>
 #include <print>
+#include <string>
+
+#include "util.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -14,18 +16,6 @@
 */
 namespace Console
 {
-    namespace details
-    {
-        /// <summary>
-        /// Get a underlying value of an enum type variable
-        /// </summary>
-        template <typename Enum>
-        auto to_value(Enum const value) -> typename std::underlying_type<Enum>::type
-        {
-            return static_cast<typename std::underlying_type<Enum>::type>(value);
-        }
-    }
-
     /// <summary>
     /// Enable Virtual Terminal
     /// </summary>
@@ -41,12 +31,12 @@ namespace Console
 
         auto mode = DWORD{};
 
-        if (!GetConsoleMode(hStdOut, &mode))
+        if (not GetConsoleMode(hStdOut, &mode))
         {
             return false;
         }
 
-        if (!SetConsoleMode(hStdOut, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
+        if (not SetConsoleMode(hStdOut, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
         {
             return false;
         }
@@ -67,12 +57,12 @@ namespace Console
 
         auto mode = DWORD{};
 
-        if (!GetConsoleMode(hStdOut, &mode))
+        if (not GetConsoleMode(hStdOut, &mode))
         {
             return false;
         }
 
-        if (!SetConsoleMode(hStdOut, mode & ~ENABLE_VIRTUAL_TERMINAL_PROCESSING))
+        if (not SetConsoleMode(hStdOut, mode & ~ENABLE_VIRTUAL_TERMINAL_PROCESSING))
         {
             return false;
         }
@@ -126,39 +116,149 @@ namespace Console
         std::print(CSI "0m");
     }
 
-    inline void Write(std::string_view text, const std::initializer_list<Format>& formatList)
-    {
-        auto formatString = std::string{ CSI };
 
-        for (const auto& fmt : formatList)
+    namespace detail {
+        /// <summary>
+        /// Get an underlying value of an enum type variable
+        /// </summary>
+        template <typename Enum>
+        auto to_value(Enum const value) -> typename std::underlying_type<Enum>::type
         {
-            formatString.append(std::to_string(details::to_value(fmt))).append(";");
+            return static_cast<typename std::underlying_type<Enum>::type>(value);
         }
 
-        // Replace the last ";" with "m"
-        formatString.back() = 'm';
+        void Write(const std::initializer_list<Format>& consoleFormat, std::string_view text)
+        {
+            auto formatString = std::string{ CSI };
 
-        std::print("{}{}", formatString, text);
-        ResetFormat();
+            for (const auto& fmt : consoleFormat)
+            {
+                formatString.append(std::to_string(detail::to_value(fmt))).append(";");
+            }
+
+            // Replace the last ";" with "m"
+            formatString.back() = 'm';
+            std::print("{}{}", formatString, text);
+
+            ResetFormat();
+        }
     }
 
-    inline void WriteLine(std::string_view text, const std::initializer_list<Format>& formatList)
-    {
-        Write(text, formatList);
+    /*
+    * Following Write/WriteLine functions are bacially thin wrappers around std::print/println with optional Console::Format parameter.
+    * Overloaded for both char & wchar_t variants.
+    */
+
+    template <class... Args>
+    void Write(const std::format_string<Args...> format, Args&&... args) {
+        // Just forward to std::print
+        std::print(format, std::forward<Args>(args)...);
+    }
+
+    template <class... Args>
+    void Write(const std::wformat_string<Args...> format, Args&&... args) {
+        // std::print does not work on wchar_t (on MSVC), but std::format does.
+        std::print("{}", Util::to_string(std::format(format, std::forward<Args>(args)...)));
+    }
+
+    template <class... Args>
+    void Write(const std::initializer_list<Format>& consoleFormat, const std::format_string<Args...> format, Args&&... args) {
+        detail::Write(consoleFormat, std::format(format, std::forward<Args>(args)...));
+    }
+
+    template <class... Args>
+    void Write(const std::initializer_list<Format>& consoleFormat, const std::wformat_string<Args...> format, Args&&... args) {
+        detail::Write(consoleFormat, Util::to_string(std::format(format, std::forward<Args>(args)...)));
+    }
+
+    template <class... Args>
+    void WriteLine(const std::format_string<Args...> format, Args&&... args) {
+        // Just forward to std::println
+        std::println(format, std::forward<Args>(args)...);
+    }
+
+    template <class... Args>
+    void WriteLine(const std::wformat_string<Args...> format, Args&&... args) {
+        // std::println does not work on wchar_t (on MSVC), but std::format does.
+        std::println("{}", Util::to_string(std::format(format, std::forward<Args>(args)...)));
+    }
+
+    template <class... Args>
+    void WriteLine(const std::initializer_list<Format>& consoleFormat, const std::format_string<Args...> format, Args&&... args) {
+        detail::Write(consoleFormat, std::format(format, std::forward<Args>(args)...));
         std::println("");
     }
 
-    template<typename... Args>
-    void Write(std::string_view text, Args... args)
-    {
-        Write(text, { args... });
+    template <class... Args>
+    void WriteLine(const std::initializer_list<Format>& consoleFormat, const std::wformat_string<Args...> format, Args&&... args) {
+        detail::Write(consoleFormat, Util::to_string(std::format(format, std::forward<Args>(args)...)));
+        std::println("");
     }
 
-    template<typename... Args>
-    void WriteLine(std::string_view text, Args... args)
-    {
-        WriteLine(text, { args... });
-    }
+
+    //
+    // Write version
+    //
+    //inline void Write(std::string_view text, const std::initializer_list<Format>& formatList = std::initializer_list<Format>{})
+    //{
+    //    auto formatString = std::string{ CSI };
+
+    //    for (const auto& fmt : formatList)
+    //    {
+    //        formatString.append(std::to_string(detail::to_value(fmt))).append(";");
+    //    }
+
+    //    // Replace the last ";" with "m"
+    //    formatString.back() = 'm';
+
+    //    std::print("{}{}", formatString, text);
+    //    ResetFormat();
+    //}
+
+    //template<typename... Args>
+    //void Write(std::string_view text, Args... args)
+    //{
+    //    Write(text, { args... });
+    //}
+
+    //inline void WriteLine(std::string_view text, const std::initializer_list<Format>& formatList = std::initializer_list<Format>{})
+    //{
+    //    Write(text, formatList);
+    //    std::println("");
+    //}
+
+    //template<typename... Args>
+    //void WriteLine(std::string_view text, Args... args)
+    //{
+    //    WriteLine(text, { args... });
+    //}
+
+    ////
+    //// Wide versions
+    ////
+
+    //inline void Write(std::wstring_view text, const std::initializer_list<Format>& formatList)
+    //{
+    //    Write(Util::to_string(text), formatList);
+    //}
+
+    //template<typename... Args>
+    //void Write(std::wstring_view text, Args... args)
+    //{
+    //    Write(text, { args... });
+    //}
+
+    //inline void WriteLine(std::wstring_view text, const std::initializer_list<Format>& formatList)
+    //{
+    //    Write(text, formatList);
+    //    std::println("");
+    //}
+
+    //template<typename... Args>
+    //void WriteLine(std::wstring_view text, Args... args)
+    //{
+    //    WriteLine(text, {args...});
+    //}
 }
 
 #undef ESC

@@ -7,7 +7,7 @@ using namespace Windows::Foundation;
 using namespace Windows::Security::Credentials;
 using namespace Windows::Security::Authentication::Web::Core;
 
-namespace Util::details
+namespace Util::detail
 {
     // Maps to convert some enums to strings
 #define MAPENTRY(value) { value, #value }
@@ -44,17 +44,17 @@ namespace Util
 {
     inline std::string to_string(WebAccountState accountState) noexcept
     {
-        return details::WebAccountStateMap.at(accountState);
+        return detail::WebAccountStateMap.at(accountState);
     }
 
     inline std::string to_string(FindAllWebAccountsStatus status) noexcept
     {
-        return details::FindAllWebAccountsStatusMap.at(status);
+        return detail::FindAllWebAccountsStatusMap.at(status);
     }
 
     inline std::string to_string(WebTokenRequestStatus status) noexcept
     {
-        return details::WebTokenRequestStatusMap.at(status);
+        return detail::WebTokenRequestStatusMap.at(status);
     }
 
     inline std::string to_string(std::wstring_view str) noexcept
@@ -84,6 +84,16 @@ namespace Util
 
         return wstr;
     }
+
+    inline std::filesystem::path GetModulePath(HMODULE hModule)
+    {
+        auto exePath = std::wstring(MAX_PATH, 0);
+        auto cch = GetModuleFileNameW(hModule, exePath.data(), static_cast<DWORD>(exePath.size()));
+        exePath.resize(cch);
+
+        return exePath;
+    }
+
 
     /// <summary>
     /// Get file version as std::wstring
