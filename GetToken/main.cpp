@@ -357,15 +357,12 @@ void PrintBanner()
 {
     //Get this executable file name & version
     static const auto exeName = []() {
-        auto exePath = std::string(MAX_PATH, 0);
-        auto cch = GetModuleFileNameA(nullptr, exePath.data(), static_cast<DWORD>(exePath.size()));
-        exePath.resize(cch);
+        const auto exePath = Util::GetModulePath(nullptr).string();
         return exePath.substr(exePath.rfind('\\') + 1);
     }();
 
     static const auto version = []() {
-        auto exePath = std::array<wchar_t, MAX_PATH>{};
-        GetModuleFileNameW(nullptr, exePath.data(), static_cast<DWORD>(exePath.size()));
+        const auto exePath = Util::GetModulePath(nullptr).wstring();
         auto version = Util::GetFileVersion(exePath.data());
         return Util::to_string(version.value_or(L""));
     }();
