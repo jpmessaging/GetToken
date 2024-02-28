@@ -13,11 +13,11 @@ using namespace Windows::Security::Authentication::Web::Core;
 using namespace Diagnostics;
 
 // Forward declarations
-std::expected<Option, std::string> ParseOption(int argc, char** argv);
+auto ParseOption(int argc, char** argv) -> std::expected<Option, std::string>;
 void EnableTrace(const Option& option);
-IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd);
-WebTokenRequest GetWebTokenRequest(const WebAccountProvider& provider, WebTokenRequestPromptType promptType, const Option& option);
-IAsyncOperation<WebTokenRequestResult> InvokeRequestTokenAsync(WebTokenRequest& request, HWND hwnd);
+auto MainAsync(const Option& option, const HWND hwnd) -> IAsyncOperation<int>;
+auto GetWebTokenRequest(const WebAccountProvider& provider, WebTokenRequestPromptType promptType, const Option& option) -> WebTokenRequest;
+auto InvokeRequestTokenAsync(WebTokenRequest& request, HWND hwnd) -> IAsyncOperation<WebTokenRequestResult>;
 HWND CreateAnchorWindow();
 void PrintWebTokenResponse(const WebTokenResponse& response);
 void PrintProviderError(const WebTokenRequestResult& result);
@@ -36,7 +36,6 @@ int main(int argc, char** argv)
     winrt::init_apartment();
     
     Console::EnableVirtualTerminal();
-    PrintBanner();
 
     auto option = ParseOption(argc, argv);
 
@@ -54,7 +53,9 @@ int main(int argc, char** argv)
 
     // Always enable tracing
     EnableTrace(*option);
- 
+
+    PrintBanner();
+
     // RequestTokenAsync() needs to run on a UI thread
     // Note: I could simply use the console window:
     //   auto hwnd = GetAncestor(GetConsoleWindow(), GA_ROOTOWNER);
@@ -91,6 +92,8 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     if (not provider)
     {
         Console::WriteLine(ConsoleFormat::Error, LR"(FindAccountProviderAsync failed to find Provider "{}")", WAM::ProviderId::MICROSOFT);
+        Trace::Write(LR"(FindAccountProviderAsync failed to find Provider "{}")", WAM::ProviderId::MICROSOFT);
+
         co_return 1;
     }
 
@@ -98,6 +101,8 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     Console::WriteLine(L"  ID: {}", provider.Id());
     Console::WriteLine(LR"(  DisplayName: "{}")", provider.DisplayName());
     Console::WriteLine("");
+
+    Trace::Write(LR"(Provider: {}; DisplayName: "{}")", provider.Id(), provider.DisplayName());
 
     /*
     * Find Web Accounts
@@ -114,6 +119,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     }
 
     auto accounts = findResults.Accounts();
+    Trace::Write("Found {} web account(s)", accounts.Size());
 
     if (accounts.Size() == 0)
     {
@@ -127,6 +133,8 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     // Print account properties
     for (const auto& account : accounts)
     {
+        Trace::Write(L"Account Id: {}, State: {}", account.Id(), Util::to_wstring(account.State()));
+
         Console::WriteLine("");
         Console::WriteLine(L"  ID: {}", account.Id());
         Console::WriteLine("  State: {}", Util::to_string(account.State()));
@@ -135,11 +143,13 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         for (const auto& [key, value] : account.Properties())
         {
             Console::WriteLine(L"  [{},{}]", key, value);
+            Trace::Write(L"  [{},{}]", key, value);
         }
 
         if (option.SignOut())
         {
-            Console::WriteLine(ConsoleFormat::Warning, "\n  Signing out from this account ... ");
+            Console::WriteLine(ConsoleFormat::Warning, "\n  Signing out from this account ... ");            
+            Trace::Write(L"Signing out of account {}", account.Id());
             account.SignOutAsync().get();
         }
     }
@@ -152,6 +162,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     try
     {
         Console::WriteLine(ConsoleFormat::Verbose, "Invoking WebAuthenticationCoreManager::GetTokenSilentlyAsync ...\n");
+        Trace::Write("Invoking WebAuthenticationCoreManager::GetTokenSilentlyAsync ...");
 
         auto request = GetWebTokenRequest(provider, WebTokenRequestPromptType::Default, option);
 
@@ -159,6 +170,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         const auto requestStatus = requestResult.ResponseStatus();
 
         Console::WriteLine("GetTokenSilentlyAsync returned {}", Util::to_string(requestStatus));
+        Trace::Write("GetTokenSilentlyAsync returned {}", Util::to_string(requestStatus));
 
         if (requestStatus == WebTokenRequestStatus::Success)
         {
@@ -173,13 +185,15 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     {
         // https://learn.microsoft.com/en-us/windows/uwp/cpp-and-winrt-apis/error-handling
         Console::WriteLine(ConsoleFormat::Error, L"GetTokenSilentlyAsync failed with an exception. code:{:#x}, message:{}", static_cast<std::uint32_t>(e.code().value), e.message());
+        Trace::Write(L"GetTokenSilentlyAsync failed with an exception. code:{:#x}, message:{}", static_cast<std::uint32_t>(e.code().value), e.message());
     }
 
     Console::WriteLine("");
 
     try
     {
-        Console::WriteLine(ConsoleFormat::Verbose, "Invoking WebAuthenticationCoreManager::RequestTokenAsync() ...\n");
+        Console::WriteLine(ConsoleFormat::Verbose, "Invoking WebAuthenticationCoreManager::RequestTokenAsync ...\n");
+        Trace::Write("Invoking WebAuthenticationCoreManager::RequestTokenAsync ...");
 
         // Use ForceAuthentication here to show UI regardless of auth state.
         auto request = GetWebTokenRequest(provider, WebTokenRequestPromptType::ForceAuthentication, option);
@@ -188,6 +202,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         auto requestStatus = requestResult.ResponseStatus();
 
         Console::WriteLine("RequestTokenAsync returned {}\n", Util::to_string(requestStatus));
+        Trace::Write(L"RequestTokenAsync returned {}\n", Util::to_wstring(requestStatus));
 
         if (requestStatus == WebTokenRequestStatus::Success)
         {
@@ -196,6 +211,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         else if (requestStatus == WebTokenRequestStatus::UserCancel)
         {
             Console::WriteLine(ConsoleFormat::Warning, "User canceled the request");
+            Trace::Write("User canceled the request");
         }
         else
         {
@@ -205,6 +221,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     catch (const winrt::hresult_error& e)
     {
         Console::WriteLine(ConsoleFormat::Error, L"RequestTokenAsync failed with an exception. code:{:#x}, message:{}", static_cast<std::uint32_t>(e.code().value), e.message());
+        Trace::Write(L"RequestTokenAsync failed with an exception. code:{:#x}, message:{}", static_cast<std::uint32_t>(e.code().value), e.message());
     }
 }
 
@@ -247,9 +264,13 @@ void PrintWebTokenResponse(const WebTokenResponse& response)
     Console::WriteLine(L"  WebAccount Id:{}", response.WebAccount().Id());
     Console::WriteLine("  WebTokenResponse Properties:\n");
 
+    Trace::Write(L"WebAccount Id:{}", response.WebAccount().Id());
+    Trace::Write("WebTokenResponse Properties:");
+
     for (const auto& [key, value] : response.Properties())
     {
         Console::WriteLine(L"  [{},{}]", key, value);
+        Trace::Write(L"  [{},{}]", key, value);
     }
 
     auto provError = response.ProviderError();
@@ -257,6 +278,7 @@ void PrintWebTokenResponse(const WebTokenResponse& response)
     if (provError)
     {
         Console::WriteLine(ConsoleFormat::Error, L"ErrorCode: {:#x}, ErrorMessage: {}", static_cast<std::uint32_t>(provError.ErrorCode()), provError.ErrorMessage());
+        Trace::Write(L"ErrorCode: {:#x}, ErrorMessage: {}", static_cast<std::uint32_t>(provError.ErrorCode()), provError.ErrorMessage());
     }
 }
 
@@ -349,6 +371,7 @@ void PrintBanner()
     }();
 
     Console::WriteLine(ConsoleFormat::Verbose, "{} (version {})\n", exeName, version);
+    Trace::Write("{} (version {}), PID: {}\n", exeName, version, GetCurrentProcessId());
 }
 
 void EnableTrace(const Option& option)
@@ -374,7 +397,7 @@ void EnableTrace(const Option& option)
 
          path /= fileName;
 
-        Trace::Init(path.wstring());
+        Trace::Enable(path.wstring());
     }
     catch (const std::exception& e)
     {

@@ -129,37 +129,84 @@ namespace Diagnostics::detail
 #pragma endregion CsvTracer member definitions
 } // end of namespace Diagnostics::detail
 
+namespace Diagnostics::Trace
+{
+    inline auto Enabled() -> bool;
+}
+
 namespace Diagnostics::detail
 {
     inline std::optional<CsvTracer> _tracer = std::nullopt;
-}
-
-namespace Diagnostics::Trace
-{
-    inline auto Init(std::wstring_view path) -> void
-    {
-        detail::_tracer.emplace(path);
-    }
-
-    inline auto Enabled() -> bool
-    {
-        return detail::_tracer.has_value();
-    }
 
     inline auto Write(std::wstring_view message) -> void
     {
-        if (Enabled())
+        if (Diagnostics::Trace::Enabled())
         {
-            detail::_tracer->Write(message);
+            _tracer->Write(message);
         }
     }
 
     inline auto Write(std::string_view message) -> void
     {
-        if ((Enabled()))
+        if ((Diagnostics::Trace::Enabled()))
         {
             Write(Util::to_wstring(message));
         }
     }
+}
+
+namespace Diagnostics::Trace
+{
+        inline auto Enable(std::wstring_view path) -> void
+        {
+            if (detail::_tracer) 
+                throw std::runtime_error{ std::format("Trace has been already initialized with {}", Util::to_string(path)) };
+
+            detail::_tracer.emplace(path);
+        }
+
+        inline auto Disable() -> void
+        {
+            if (detail::_tracer)
+                detail::_tracer.reset();
+        }
+
+        inline auto Enabled() -> bool
+        {
+            return detail::_tracer.has_value();
+        }
+
+        template <class... Args>
+        void Write(const std::format_string<Args...> format, Args&&... args) 
+        {
+            Diagnostics::detail::Write(std::format(format, std::forward<Args>(args)...));
+        }
+
+        template <class... Args>
+        void Write(const std::wformat_string<Args...> format, Args&&... args) {
+
+            Diagnostics::detail::Write(std::format(format, std::forward<Args>(args)...));
+        }
 } // end of namespace Diagnostics::Trace
+
+//namespace Diagnostics::detail
+//{
+//    inline std::optional<CsvTracer> _tracer = std::nullopt;
+//
+//    inline auto Write(std::wstring_view message) -> void
+//    {
+//        if (Diagnostics::Trace::Enabled())
+//        {
+//            _tracer->Write(message);
+//        }
+//    }
+//
+//    inline auto Write(std::string_view message) -> void
+//    {
+//        if ((::Trace::Enabled()))
+//        {
+//            Write(Util::to_wstring(message));
+//        }
+//    }
+//}
 #endif

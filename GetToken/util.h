@@ -42,21 +42,6 @@ namespace Util::detail
 
 namespace Util
 {
-    inline std::string to_string(WebAccountState accountState) noexcept
-    {
-        return detail::WebAccountStateMap.at(accountState);
-    }
-
-    inline std::string to_string(FindAllWebAccountsStatus status) noexcept
-    {
-        return detail::FindAllWebAccountsStatusMap.at(status);
-    }
-
-    inline std::string to_string(WebTokenRequestStatus status) noexcept
-    {
-        return detail::WebTokenRequestStatusMap.at(status);
-    }
-
     inline std::string to_string(std::wstring_view str) noexcept
     {
         if (str.empty())
@@ -83,6 +68,36 @@ namespace Util
         ::MultiByteToWideChar(CP_ACP, 0, str.data(), static_cast<int>(str.size()), wstr.data(), cch);
 
         return wstr;
+    }
+
+    inline std::string to_string(WebAccountState accountState) noexcept
+    {
+        return detail::WebAccountStateMap.at(accountState);
+    }
+
+    inline std::wstring to_wstring(WebAccountState accountState) noexcept
+    {
+        return to_wstring(detail::WebAccountStateMap.at(accountState));
+    }
+
+    inline std::string to_string(FindAllWebAccountsStatus status) noexcept
+    {
+        return detail::FindAllWebAccountsStatusMap.at(status);
+    }
+
+    inline std::wstring to_wstring(FindAllWebAccountsStatus status) noexcept
+    {
+        return to_wstring(detail::FindAllWebAccountsStatusMap.at(status));
+    }
+
+    inline std::string to_string(WebTokenRequestStatus status) noexcept
+    {
+        return detail::WebTokenRequestStatusMap.at(status);
+    }
+
+    inline std::wstring to_wstring(WebTokenRequestStatus status) noexcept
+    {
+        return to_wstring(detail::WebTokenRequestStatusMap.at(status));
     }
 
     inline std::filesystem::path GetModulePath(HMODULE hModule)
