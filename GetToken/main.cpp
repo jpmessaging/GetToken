@@ -45,6 +45,11 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    const auto exePath = Util::GetModulePath(nullptr);
+    const auto exeName = exePath.stem();
+    auto version = Util::GetFileVersion(exePath.c_str());
+    Console::WriteLine(ConsoleFormat::Verbose, L"{} (version {})\n", exeName.c_str(), version.value_or(L""));
+
     if (option->Help())
     {
         option->PrintHelp();
@@ -53,8 +58,7 @@ int main(int argc, char** argv)
 
     // Always enable tracing
     EnableTrace(*option);
-
-    PrintBanner();
+    Trace::Write(L"{} (version {} {})", exeName.c_str(), version.value_or(L""), GetCurrentProcessId());
 
     // RequestTokenAsync() needs to run on a UI thread
     // Note: I could simply use the console window:
