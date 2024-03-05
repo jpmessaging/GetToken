@@ -9,11 +9,11 @@
 #include <Windows.h>
 #undef WIN32_LEAN_AND_MEAN
 
-/*
-* See the following article for VT:
-* Console Virtual Terminal Sequences
-* https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
-*/
+/// <summary>
+/// See the following article for VT:
+/// Console Virtual Terminal Sequence
+/// https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
+/// </summary>
 namespace Console
 {
     /// <summary>

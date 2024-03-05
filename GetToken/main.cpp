@@ -13,15 +13,15 @@ using namespace Windows::Security::Authentication::Web::Core;
 using namespace Diagnostics;
 
 // Forward declarations
-auto ParseOption(int argc, char** argv) -> std::expected<Option, std::string>;
-void EnableTrace(const Option& option);
+auto ParseOption(int argc, char** argv) noexcept -> std::expected<Option, std::string>;
+void EnableTrace(const Option& option) noexcept;
 auto MainAsync(const Option& option, const HWND hwnd) -> IAsyncOperation<int>;
 auto GetWebTokenRequest(const WebAccountProvider& provider, WebTokenRequestPromptType promptType, const Option& option) -> WebTokenRequest;
 auto InvokeRequestTokenAsync(WebTokenRequest& request, HWND hwnd) -> IAsyncOperation<WebTokenRequestResult>;
 HWND CreateAnchorWindow();
-void PrintWebTokenResponse(const WebTokenResponse& response);
-void PrintProviderError(const WebTokenRequestResult& result);
-void PrintBanner();
+void PrintWebTokenResponse(const WebTokenResponse& response) noexcept;
+void PrintProviderError(const WebTokenRequestResult& result) noexcept;
+void PrintBanner() noexcept;
 
 namespace ConsoleFormat
 {
@@ -58,7 +58,14 @@ int main(int argc, char** argv)
 
     // Always enable tracing
     EnableTrace(*option);
-    Trace::Write(L"{} (version {} {})", exeName.c_str(), version.value_or(L""), GetCurrentProcessId());
+    Trace::Write(L"{} (version {}), PID: {}", exeName.c_str(), version.value_or(L""), GetCurrentProcessId());
+    Trace::Write("CommandLine: {}", GetCommandLineA());
+
+    if (option->Wait())
+    {
+        Console::Write("Hit enter to continue...");
+        std::cin.ignore();
+    }
 
     // RequestTokenAsync() needs to run on a UI thread
     // Note: I could simply use the console window:
@@ -263,7 +270,7 @@ IAsyncOperation<WebTokenRequestResult> InvokeRequestTokenAsync(WebTokenRequest& 
     co_return co_await getTokenTask;
 }
 
-void PrintWebTokenResponse(const WebTokenResponse& response)
+void PrintWebTokenResponse(const WebTokenResponse& response) noexcept
 {
     Console::WriteLine(L"  WebAccount Id:{}", response.WebAccount().Id());
     Console::WriteLine("  WebTokenResponse Properties:\n");
@@ -286,7 +293,7 @@ void PrintWebTokenResponse(const WebTokenResponse& response)
     }
 }
 
-void PrintProviderError(const WebTokenRequestResult& result)
+void PrintProviderError(const WebTokenRequestResult& result) noexcept
 {
     // ResponseError might be null (e.g. when status is WebTokenRequestStatus::UserCancel)
     if (const auto& error = result.ResponseError())
@@ -357,7 +364,7 @@ HWND CreateAnchorWindow()
 /// <summary>
 /// Print file name and vesrion
 /// </summary>
-void PrintBanner()
+void PrintBanner() noexcept
 {
     //Get this executable file name & version
     static const auto exeName = []() {
@@ -375,7 +382,7 @@ void PrintBanner()
     Trace::Write("{} (version {}), PID: {}\n", exeName, version, GetCurrentProcessId());
 }
 
-void EnableTrace(const Option& option)
+void EnableTrace(const Option& option) noexcept
 {
     auto exePath = Util::GetModulePath(nullptr);
     auto path = option.TracePath().has_value() ? std::filesystem::path{ option.TracePath().value() } : exePath.parent_path();
@@ -396,7 +403,7 @@ void EnableTrace(const Option& option)
         fileName += std::format(L"{0:%Y%m%d}_{0:%H%M%S}", time_point_cast<seconds>(system_clock::now()));
         fileName.replace_extension(L"log");
 
-         path /= fileName;
+        path /= fileName;
 
         Trace::Enable(path.wstring());
     }
@@ -412,25 +419,24 @@ void EnableTrace(const Option& option)
 /// <param name="argc">arg count</param>
 /// <param name="argv">array of arg strings</param>
 /// <returns></returns>
-std::expected<Option, std::string> ParseOption(int argc, char** argv)
+std::expected<Option, std::string> ParseOption(int argc, char** argv) noexcept
 {
-    auto option = Option{};
+    auto option = std::optional<Option>{};
 
     try
     {
-        option.Parse(argc, argv);
+        option.emplace(argc, argv);
     }
-    catch (const std::exception& e)
+    catch (...)
     {
         return std::unexpected{ "Failed to parse the input options. Please check the avaialble options with -h or -? switch" };
     }
 
-    // If unknown options are given, display them and exit
-    if (option.UnknownOptions().size())
+    if (option->UnknownOptions().size())
     {
         auto error = std::string{ "Unknown options are found:" };
 
-        for (const auto& opt : option.UnknownOptions())
+        for (const auto& opt : option->UnknownOptions())
         {
             error.append(opt).append("\n");
         }
@@ -439,7 +445,7 @@ std::expected<Option, std::string> ParseOption(int argc, char** argv)
         return std::unexpected{ error };
     }
 
-    return option;
+    return std::move(*option);
 }
 
 // refs:

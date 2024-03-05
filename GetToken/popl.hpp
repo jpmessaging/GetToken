@@ -319,6 +319,10 @@ namespace popl
         /// Destructor
         virtual ~OptionParser() = default;
 
+        // ryusukef: Make it copyable
+        OptionParser(const OptionParser&) = default;
+        OptionParser& operator=(const OptionParser&) = default;
+
         // ryusukef: Make it movable
         OptionParser(OptionParser&&) = default;
         OptionParser& operator=(OptionParser&&) = default;

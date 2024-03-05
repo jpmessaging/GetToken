@@ -9,18 +9,20 @@
 #include "popl.hpp"
 #undef WINDOWS
 
-class Option
+class Option final
 {
 public:
-    explicit Option() :
+    Option() :
         m_parser{ "Available options" },
         m_help{ m_parser.add<popl::Switch>("h", "help", "Show this help message") },
         m_helpAlias{ m_parser.add<popl::Switch>("?", "", "Show this help message") },
-        m_signOut{ m_parser.add<popl::Switch>("", "signout", "sign out of Web Accounts") },
+        m_signOut{ m_parser.add<popl::Switch>("", "signout", "Sign out of Web Accounts") },
         m_clientId{ m_parser.add<popl::Value<std::string>>("c", "clientid", std::format("Client ID. Default: {}", Util::to_string(WAM::ClientId::MSOFFICE))) },
-        m_scopes{ m_parser.add<popl::Value<std::string>>("", "scopes", std::format(R"(requested scopes of the token. Default: "{}")", Util::to_string(WAM::Scopes::DEFAULT_SCOPES))) },
+        m_scopes{ m_parser.add<popl::Value<std::string>>("", "scopes", std::format(R"(Requested scopes of the token. Default: "{}")", Util::to_string(WAM::Scopes::DEFAULT_SCOPES))) },
         m_properties{ m_parser.add<popl::Value<std::string>>("p", "property", "Request property (e.g., longin_hint=user01@example.com, prompt=login)") },
-        m_tracePath{ m_parser.add<popl::Value<std::string>>("t", "tracepath", "Folder path for a trace file") }
+        m_tracePath{ m_parser.add<popl::Value<std::string>>("t", "tracepath", "Folder path for a trace file") },
+        m_wait{ m_parser.add<popl::Switch>("w", "wait", "Wait execution until user enters") }
+
     { /* empty */ }
 
     Option(int argc, char** argv) : Option()
@@ -28,13 +30,7 @@ public:
         m_parser.parse(argc, argv);
     }
 
-    // No copy
-    Option(const Option&) = delete;
-    Option& operator=(const Option&) = delete;
-
-    // Movable
-    Option(Option&&) = default;
-    Option& operator=(Option&&) = default;
+    // detor, copy, and move are compiler-generated default.
 
     void Parse(int argc, char** argv)
     {
@@ -126,6 +122,11 @@ public:
         return value;
     }
 
+    bool Wait() const noexcept
+    {
+        return m_wait->value();
+    }
+
     void PrintHelp() const noexcept
     {
         // Get this executable file name
@@ -169,5 +170,6 @@ private:
     std::shared_ptr<const popl::Value<std::string>> m_scopes;
     std::shared_ptr<const popl::Value<std::string>> m_properties;
     std::shared_ptr<const popl::Value<std::string>> m_tracePath;
+    std::shared_ptr<const popl::Switch> m_wait;
 };
 
