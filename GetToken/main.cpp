@@ -45,25 +45,28 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    const auto exePath = Util::GetModulePath(nullptr);
-    const auto exeName = exePath.stem();
-    auto version = Util::GetFileVersion(exePath.c_str());
-    Console::WriteLine(ConsoleFormat::Verbose, L"{} (version {})\n", exeName.c_str(), version.value_or(L""));
+    Console::WriteLine(ConsoleFormat::Verbose, "{}", option->GetVersion());
 
     if (option->Help())
     {
-        option->PrintHelp();
+        Console::WriteLine("{}", option->GetHelp());
+        return 0;
+    }
+
+    if (option->Version())
+    {
         return 0;
     }
 
     // Always enable tracing
     EnableTrace(*option);
-    Trace::Write(L"{} (version {}), PID: {}", exeName.c_str(), version.value_or(L""), GetCurrentProcessId());
+
+    Trace::Write("{}", option->GetVersion());
     Trace::Write("CommandLine: {}", GetCommandLineA());
 
     if (option->Wait())
     {
-        Console::Write("Hit enter to continue...");
+        Console::Write(ConsoleFormat::Warning, "Hit enter to continue...");
         std::cin.ignore();
     }
 

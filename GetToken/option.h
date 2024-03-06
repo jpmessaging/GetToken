@@ -1,7 +1,6 @@
 #pragma once
 #include "pch.h"
 
-// #include "console.h"
 #include "util.h"
 #include "wam.h"
 
@@ -16,6 +15,7 @@ public:
         m_parser{ "Available options" },
         m_help{ m_parser.add<popl::Switch>("h", "help", "Show this help message") },
         m_helpAlias{ m_parser.add<popl::Switch>("?", "", "Show this help message") },
+        m_version{ m_parser.add<popl::Switch>("v", "version", "Show version")},
         m_signOut{ m_parser.add<popl::Switch>("", "signout", "Sign out of Web Accounts") },
         m_clientId{ m_parser.add<popl::Value<std::string>>("c", "clientid", std::format("Client ID. Default: {}", Util::to_string(WAM::ClientId::MSOFFICE))) },
         m_scopes{ m_parser.add<popl::Value<std::string>>("", "scopes", std::format(R"(Requested scopes of the token. Default: "{}")", Util::to_string(WAM::Scopes::DEFAULT_SCOPES))) },
@@ -45,6 +45,11 @@ public:
     auto Help() const noexcept
     {
         return m_help->value() || m_helpAlias->value(); 
+    }
+
+    auto Version() const noexcept
+    {
+        return m_version->value();
     }
 
     auto SignOut() const
@@ -127,19 +132,27 @@ public:
         return m_wait->value();
     }
 
-    void PrintHelp() const noexcept
+    std::string GetVersion() const
     {
-        // Get this executable file name
-        static const auto exeName = []() {
-            auto exePath = std::string(MAX_PATH, 0);
-            auto cch = GetModuleFileNameA(nullptr, exePath.data(), static_cast<DWORD>(exePath.size()));
-            exePath.resize(cch);
-            return exePath.substr(exePath.rfind('\\') + 1);
+        static auto ver = []() {
+            const auto exePath = Util::GetModulePath(nullptr);
+            const auto exeName = exePath.stem();
+            auto version = Util::GetFileVersion(exePath.c_str());
+            return std::format("{} (version {})", Util::to_string(exeName.c_str()), Util::to_string(version.value_or(L"")));
         }();
 
-        std::print("{}", m_parser.help());
+        return ver;
+    }
 
-        std::println(R"(
+    std::string GetHelp() const noexcept
+    {
+        static const auto exeName = []() {
+            const auto exePath = Util::GetModulePath(nullptr);
+            return Util::to_string(exePath.stem().c_str());
+        }();
+
+        auto help = m_parser.help();
+        help += std::format(R"(
 Note: All options are case insensitive.
 
 Example 1: {0}
@@ -158,6 +171,7 @@ Example 5: {0} --signout
 Sign out from all web accounts before making token requests
 )", exeName);
 
+        return help;
     }
 
 private:
@@ -165,6 +179,7 @@ private:
 
     std::shared_ptr<const popl::Switch> m_help;
     std::shared_ptr<const popl::Switch> m_helpAlias;
+    std::shared_ptr<const popl::Switch> m_version;
     std::shared_ptr<const popl::Switch> m_signOut;
     std::shared_ptr<const popl::Value<std::string>> m_clientId;
     std::shared_ptr<const popl::Value<std::string>> m_scopes;

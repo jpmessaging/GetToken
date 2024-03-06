@@ -28,3 +28,7 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+
+#define WINDOWS
+#include "popl.hpp"
+#undef WINDOWS
