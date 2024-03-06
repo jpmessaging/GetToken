@@ -299,6 +299,7 @@ void PrintProviderError(const WebTokenRequestResult& result) noexcept
     if (const auto& error = result.ResponseError())
     {
         Console::WriteLine(ConsoleFormat::Error, L"ErrorCode: {:#x}, ErrorMessage: {}", static_cast<std::uint32_t>(error.ErrorCode()), error.ErrorMessage());
+        Trace::Write(L"ErrorCode: {:#x}, ErrorMessage: {}", static_cast<std::uint32_t>(error.ErrorCode()), error.ErrorMessage());
     }
 }
 
