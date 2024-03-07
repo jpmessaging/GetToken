@@ -43,7 +43,7 @@ namespace Console
     }
 
     /// <summary>
-    /// Enable Virtual Terminal
+    /// Disable Virtual Terminal
     /// </summary>
     /// <returns>bool true if successful</returns>
     inline bool DisableVirtualTerminal()
@@ -194,71 +194,6 @@ namespace Console
         detail::Write(consoleFormat, Util::to_string(std::format(format, std::forward<Args>(args)...)));
         std::println("");
     }
-
-
-    //
-    // Write version
-    //
-    //inline void Write(std::string_view text, const std::initializer_list<Format>& formatList = std::initializer_list<Format>{})
-    //{
-    //    auto formatString = std::string{ CSI };
-
-    //    for (const auto& fmt : formatList)
-    //    {
-    //        formatString.append(std::to_string(detail::to_value(fmt))).append(";");
-    //    }
-
-    //    // Replace the last ";" with "m"
-    //    formatString.back() = 'm';
-
-    //    std::print("{}{}", formatString, text);
-    //    ResetFormat();
-    //}
-
-    //template<typename... Args>
-    //void Write(std::string_view text, Args... args)
-    //{
-    //    Write(text, { args... });
-    //}
-
-    //inline void WriteLine(std::string_view text, const std::initializer_list<Format>& formatList = std::initializer_list<Format>{})
-    //{
-    //    Write(text, formatList);
-    //    std::println("");
-    //}
-
-    //template<typename... Args>
-    //void WriteLine(std::string_view text, Args... args)
-    //{
-    //    WriteLine(text, { args... });
-    //}
-
-    ////
-    //// Wide versions
-    ////
-
-    //inline void Write(std::wstring_view text, const std::initializer_list<Format>& formatList)
-    //{
-    //    Write(Util::to_string(text), formatList);
-    //}
-
-    //template<typename... Args>
-    //void Write(std::wstring_view text, Args... args)
-    //{
-    //    Write(text, { args... });
-    //}
-
-    //inline void WriteLine(std::wstring_view text, const std::initializer_list<Format>& formatList)
-    //{
-    //    Write(text, formatList);
-    //    std::println("");
-    //}
-
-    //template<typename... Args>
-    //void WriteLine(std::wstring_view text, Args... args)
-    //{
-    //    WriteLine(text, {args...});
-    //}
 }
 
 #undef ESC
