@@ -9,11 +9,6 @@
 #include <Windows.h>
 #undef WIN32_LEAN_AND_MEAN
 
-/// <summary>
-/// See the following article for VT:
-/// Console Virtual Terminal Sequence
-/// https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
-/// </summary>
 namespace Console
 {
     /// <summary>
@@ -68,6 +63,11 @@ namespace Console
         }
     }
 
+    /// <summary>
+    /// See the following article for VT:
+    /// Console Virtual Terminal Sequence
+    /// https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
+    /// </summary>
     enum class Format
     {
         Default = 0,      // Returns all attributes to the default state prior to modification
@@ -100,8 +100,8 @@ namespace Console
     };
 
 #define ESC "\x1b"
-#define CSI ESC "["
-#define OSC ESC "]"
+#define CSI ESC "[" // Control Sequence Introducer
+#define OSC ESC "]" // Operating system command
 
     /// <summary>
     /// Reset certain properties (Rendition, Charset, Cursor Keys Mode, etc.) to their default values
@@ -194,8 +194,31 @@ namespace Console
         detail::Write(consoleFormat, Util::to_string(std::format(format, std::forward<Args>(args)...)));
         std::println("");
     }
+
+    // Note: I could consolidate to a single template with char type as a type parameter like this:
+    //
+    // template<typename CharT, typename... Args>
+    // void Write(const std::basic_format_string<CharT, std::type_identity_t<Args>...> format, Args&&... args)
+    // {
+    //     if constexpr (std::is_same_v<CharT, char>)
+    //     {
+    //         // Just forward to std::println
+    //         std::print(format, std::forward<Args>(args)...);
+    //     }
+    //     else
+    //     {
+    //         // std::println does not work on wchar_t (on MSVC), but std::format does.
+    //         std::println("{}", Util::to_string(std::format(format, std::forward<Args>(args)...)));
+    //     }
+    // }
+    
+    // ..., but then the caller would need to specify the char type like this:
+    // Console::Write<char>("hello {}", "world");
+    // Console::Write<wchar_t>(L"hello {}", L"world");
+
+    // Since this is cumbersome, I overloaded with std::format_string & std::wformat_string 
 }
 
 #undef ESC
-#undef CSI ESC "["
-#undef OSC ESC "]"
+#undef CSI
+#undef OSC
