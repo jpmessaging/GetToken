@@ -19,8 +19,9 @@ auto MainAsync(const Option& option, const HWND hwnd) -> IAsyncOperation<int>;
 auto GetWebTokenRequest(const WebAccountProvider& provider, WebTokenRequestPromptType promptType, const Option& option) -> WebTokenRequest;
 auto InvokeRequestTokenAsync(WebTokenRequest& request, HWND hwnd) -> IAsyncOperation<WebTokenRequestResult>;
 HWND CreateAnchorWindow();
+void PrintWebAccount(const WebAccount& account) noexcept;
 void PrintWebTokenResponse(const WebTokenResponse& response) noexcept;
-void PrintProviderError(const WebTokenRequestResult& result) noexcept;
+void PrintProviderError(const WebProviderError& error) noexcept;
 void PrintBanner() noexcept;
 
 namespace ConsoleFormat
@@ -129,46 +130,37 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     const auto& findResults = co_await WebAuthenticationCoreManager::FindAllAccountsAsync(provider, clientId);
     auto accountsStatus = findResults.Status();
 
-    if (accountsStatus != FindAllWebAccountsStatus::Success)
+    if (accountsStatus == FindAllWebAccountsStatus::Success)
+    {
+        auto accounts = findResults.Accounts();
+        Trace::Write("Found {} web account(s)", accounts.Size());
+
+        if (accounts.Size() == 0)
+        {
+            Console::Write("No accounts were found");
+        }
+        else
+        {
+            Console::WriteLine("Found {} web account(s):", accounts.Size());
+        }
+
+        // Print account properties
+        for (const auto& account : accounts)
+        {
+            PrintWebAccount(account);
+
+            if (option.SignOut())
+            {
+                Console::WriteLine(ConsoleFormat::Warning, "\n  Signing out from this account ... ");
+                Trace::Write(L"Signing out of account {}", account.Id());
+                account.SignOutAsync().get();
+            }
+        }
+    }
+    else 
     {
         Console::WriteLine(ConsoleFormat::Error, "FindAllAccountsAsync failed with {}", Util::to_string(accountsStatus));
-        co_return 1;
-    }
-
-    auto accounts = findResults.Accounts();
-    Trace::Write("Found {} web account(s)", accounts.Size());
-
-    if (accounts.Size() == 0)
-    {
-        Console::Write("No accounts were found");
-    }
-    else
-    {
-        Console::WriteLine("Found {} web account(s):", accounts.Size());
-    }
-
-    // Print account properties
-    for (const auto& account : accounts)
-    {
-        Trace::Write(L"Account Id: {}, State: {}", account.Id(), Util::to_wstring(account.State()));
-
-        Console::WriteLine("");
-        Console::WriteLine(L"  ID: {}", account.Id());
-        Console::WriteLine("  State: {}", Util::to_string(account.State()));
-        Console::WriteLine("  Properties:");
-
-        for (const auto& [key, value] : account.Properties())
-        {
-            Console::WriteLine(L"  [{},{}]", key, value);
-            Trace::Write(L"  [{},{}]", key, value);
-        }
-
-        if (option.SignOut())
-        {
-            Console::WriteLine(ConsoleFormat::Warning, "\n  Signing out from this account ... ");            
-            Trace::Write(L"Signing out of account {}", account.Id());
-            account.SignOutAsync().get();
-        }
+        PrintProviderError(findResults.ProviderError());
     }
 
     Console::WriteLine("");
@@ -195,7 +187,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         }
         else
         {
-            PrintProviderError(requestResult);
+            PrintProviderError(requestResult.ResponseError());
         }
     }
     catch (const winrt::hresult_error& e)
@@ -232,7 +224,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         }
         else
         {
-            PrintProviderError(requestResult);
+            PrintProviderError(requestResult.ResponseError());
         }
     }
     catch (const winrt::hresult_error& e)
@@ -299,10 +291,10 @@ void PrintWebTokenResponse(const WebTokenResponse& response) noexcept
     }
 }
 
-void PrintProviderError(const WebTokenRequestResult& result) noexcept
+void PrintProviderError(const WebProviderError& error) noexcept
 {
     // ResponseError might be null (e.g. when status is WebTokenRequestStatus::UserCancel)
-    if (const auto& error = result.ResponseError())
+    if (error)
     {
         Console::WriteLine(ConsoleFormat::Error, L"ErrorCode: {:#x}, ErrorMessage: {}", static_cast<std::uint32_t>(error.ErrorCode()), error.ErrorMessage());
         Trace::Write(L"ErrorCode: {:#x}, ErrorMessage: {}", static_cast<std::uint32_t>(error.ErrorCode()), error.ErrorMessage());
@@ -366,6 +358,22 @@ HWND CreateAnchorWindow()
     }
 
     return hwnd;
+}
+
+void PrintWebAccount(const WebAccount& account) noexcept
+{
+    Trace::Write(L"Account Id: {}, State: {}", account.Id(), Util::to_wstring(account.State()));
+
+    Console::WriteLine("");
+    Console::WriteLine(L"  ID: {}", account.Id());
+    Console::WriteLine("  State: {}", Util::to_string(account.State()));
+    Console::WriteLine("  Properties:");
+
+    for (const auto& [key, value] : account.Properties())
+    {
+        Console::WriteLine(L"  [{},{}]", key, value);
+        Trace::Write(L"  [{},{}]", key, value);
+    }
 }
 
 /// <summary>

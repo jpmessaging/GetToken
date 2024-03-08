@@ -17,6 +17,9 @@ namespace Console
     /// <returns>bool true if successful</returns>
     inline bool EnableVirtualTerminal()
     {
+        // Set Code Page to UTF-8
+        SetConsoleOutputCP(65001);
+
         auto hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
 
         if (hStdOut == INVALID_HANDLE_VALUE)
