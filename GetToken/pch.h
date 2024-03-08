@@ -14,6 +14,9 @@
 //#include <windows.foundation.h>
 //#include <windows.security.authentication.web.core.h>
 
+#define SECURITY_WIN32
+#include <security.h>
+
 #include <algorithm>
 #include <chrono>
 #include <expected>

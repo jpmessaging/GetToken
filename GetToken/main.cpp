@@ -34,7 +34,7 @@ int main(int argc, char** argv)
 {
     std::ios_base::sync_with_stdio(false);
     winrt::init_apartment();
-    
+ 
     Console::EnableVirtualTerminal();
 
     auto option = ParseOption(argc, argv);
@@ -63,6 +63,9 @@ int main(int argc, char** argv)
 
     Trace::Write("{}", option->GetVersion());
     Trace::Write("CommandLine: {}", GetCommandLineA());
+
+    auto currentUser = Util::GetCurrentUserName();
+    Trace::Write(L"Current User: {}", currentUser.has_value() ? currentUser.value() : currentUser.error());
 
     if (option->Wait())
     {

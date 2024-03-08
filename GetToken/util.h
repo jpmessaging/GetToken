@@ -49,9 +49,9 @@ namespace Util
             return {};
         }
 
-        auto cb = WideCharToMultiByte(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), nullptr, 0, nullptr, nullptr);
+        auto cb = ::WideCharToMultiByte(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), nullptr, 0, nullptr, nullptr);
         auto utf8 = std::string(cb, 0);
-        WideCharToMultiByte(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), utf8.data(), cb, nullptr, nullptr);
+        ::WideCharToMultiByte(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), utf8.data(), cb, nullptr, nullptr);
 
         return utf8;
     }
@@ -100,15 +100,19 @@ namespace Util
         return to_wstring(detail::WebTokenRequestStatusMap.at(status));
     }
 
+    /// <summary>
+    /// Get path to the given module
+    /// </summary>
+    /// <param name="hModule">module handle. nullptr for current executable.</param>
+    /// <returns>std::filesystem::path to the module</returns>
     inline std::filesystem::path GetModulePath(HMODULE hModule)
     {
         auto exePath = std::wstring(MAX_PATH, 0);
-        auto cch = GetModuleFileNameW(hModule, exePath.data(), static_cast<DWORD>(exePath.size()));
+        auto cch = ::GetModuleFileNameW(hModule, exePath.data(), static_cast<DWORD>(exePath.size()));
         exePath.resize(cch);
 
         return exePath;
     }
-
 
     /// <summary>
     /// Get file version as std::wstring
@@ -120,7 +124,7 @@ namespace Util
         const auto size = ::GetFileVersionInfoSize(filePath, nullptr);
 
         if (size == 0) {
-            OutputDebugStringW(std::format(L"GetFileVersionInfoSize failed with {}\n", GetLastError()).c_str());
+            ::OutputDebugStringW(std::format(L"GetFileVersionInfoSize failed with {}\n", GetLastError()).c_str());
             return {};
         }
 
@@ -128,16 +132,16 @@ namespace Util
 
         if (!::GetFileVersionInfoW(filePath, 0, size, pData.get()))
         {
-            OutputDebugStringW(std::format(L"GetFileVersionInfoW failed with {}\n", GetLastError()).c_str());
+            ::OutputDebugStringW(std::format(L"GetFileVersionInfoW failed with {}\n", GetLastError()).c_str());
             return {};
         }
 
         VS_FIXEDFILEINFO* pFileInfo{};
         auto fileInfoSize = UINT{};
 
-        if (!VerQueryValue(pData.get(), L"\\", (LPVOID*)&pFileInfo, &fileInfoSize))
+        if (!::VerQueryValue(pData.get(), L"\\", (LPVOID*)&pFileInfo, &fileInfoSize))
         {
-            OutputDebugStringW(std::format(L"VerQueryValue failed with {}\n", GetLastError()).c_str());
+            ::OutputDebugStringW(std::format(L"VerQueryValue failed with {}\n", GetLastError()).c_str());
             return {};
         }
 
@@ -146,6 +150,29 @@ namespace Util
         const auto revision = (pFileInfo->dwFileVersionLS >> 16) & 0xffff;
 
         return std::format(L"{}.{}.{}", major, minor, revision);
+    }
+
+    std::expected<std::wstring, std::wstring> GetCurrentUserName()
+    {
+        auto name = std::wstring{};
+        auto cch = DWORD{};
+
+        ::GetUserNameExW(NameSamCompatible, name.data(), &cch);
+        auto ec = ::GetLastError();
+
+        if (ec == ERROR_MORE_DATA)
+        {
+            name.resize(cch);
+            cch = name.size();
+        }
+
+        if (::GetUserNameExW(NameSamCompatible, name.data(), &cch))
+        {
+            name.resize(cch);
+            return name;
+        }
+        
+        return std::unexpected<std::wstring>{ std::format(L"GetUserNameExW failed with {:#x}", static_cast<std::uint32_t>(ec)) };
     }
 
     template <std::invocable F>
