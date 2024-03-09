@@ -23,7 +23,8 @@ public:
         m_scopes{ m_parser.add<popl::Value<std::string>>("", "scopes", std::format(R"(Requested scopes of the token. Default: "{}")", Util::to_string(WAM::Scopes::DEFAULT_SCOPES))) },
         m_properties{ m_parser.add<popl::Value<std::string>>("p", "property", "Request property (e.g., longin_hint=user01@example.com, prompt=login)") },
         m_tracePath{ m_parser.add<popl::Value<std::string>>("t", "tracepath", "Folder path for a trace file") },
-        m_wait{ m_parser.add<popl::Switch>("w", "wait", "Wait execution until user enters") }
+        m_wait{ m_parser.add<popl::Switch>("w", "wait", "Wait execution until user enters") },
+        m_notrace { m_parser.add<popl::Switch>("", "notrace", "Disable trace" )}
 
     { /* empty */ }
 
@@ -57,6 +58,12 @@ public:
     auto SignOut() const
     {
         return m_signOut->value();
+    }
+
+    auto EnableTrace() const
+    {
+        // Trace is enabled by default, unless --notrace is specified
+        return not m_notrace->value();
     }
 
     const std::optional<std::wstring>& ClientId() const noexcept
@@ -183,10 +190,10 @@ private:
     std::shared_ptr<const popl::Switch> m_helpAlias;
     std::shared_ptr<const popl::Switch> m_version;
     std::shared_ptr<const popl::Switch> m_signOut;
+    std::shared_ptr<const popl::Switch> m_notrace;
     std::shared_ptr<const popl::Value<std::string>> m_clientId;
     std::shared_ptr<const popl::Value<std::string>> m_scopes;
     std::shared_ptr<const popl::Value<std::string>> m_properties;
     std::shared_ptr<const popl::Value<std::string>> m_tracePath;
     std::shared_ptr<const popl::Switch> m_wait;
 };
-

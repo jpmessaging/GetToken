@@ -59,8 +59,10 @@ int main(int argc, char** argv)
         return 0;
     }
 
-    // Always enable tracing
-    EnableTrace(*option);
+    if (option->EnableTrace())
+    {
+        EnableTrace(*option);
+    }
 
     Trace::Write("{}", option->GetVersion());
     Trace::Write("CommandLine: {}", GetCommandLineA());
