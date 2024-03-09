@@ -18,24 +18,39 @@ namespace Console
         ::SetConsoleOutputCP(CP_UTF8);
     }
 
+    namespace detail
+    {
+        // State of Virtual Terminal
+        auto vtEnabled = false;
+
+        inline bool SetVirtualTerminal(bool enable)
+        {
+            // No need to close this handle
+            if (auto hStdOut = ::GetStdHandle(STD_OUTPUT_HANDLE); hStdOut != INVALID_HANDLE_VALUE)
+            {
+                if (auto mode = DWORD{}; ::GetConsoleMode(hStdOut, &mode))
+                {
+                    auto newMode = enable ? mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING : mode & ~ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+
+                    if (::SetConsoleMode(hStdOut, newMode))
+                    {
+                        detail::vtEnabled = enable;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+    }
+
     /// <summary>
     /// Enable Virtual Terminal
     /// </summary>
     /// <returns>bool true if successful</returns>
     inline bool EnableVirtualTerminal()
     {
-        if (auto hStdOut = ::GetStdHandle(STD_OUTPUT_HANDLE); hStdOut != INVALID_HANDLE_VALUE)
-        {
-            if (auto mode = DWORD{}; ::GetConsoleMode(hStdOut, &mode))
-            {
-                if (::SetConsoleMode(hStdOut, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        return detail::SetVirtualTerminal(true);
     }
 
     /// <summary>
@@ -44,18 +59,7 @@ namespace Console
     /// <returns>bool true if successful</returns>
     inline bool DisableVirtualTerminal()
     {
-        if (auto hStdOut = ::GetStdHandle(STD_OUTPUT_HANDLE); hStdOut != INVALID_HANDLE_VALUE)
-        {
-            if (auto mode = DWORD{}; ::GetConsoleMode(hStdOut, &mode))
-            {
-                if (::SetConsoleMode(hStdOut, mode & ~ENABLE_VIRTUAL_TERMINAL_PROCESSING))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        return detail::SetVirtualTerminal(false);
     }
 
     /// <summary>
@@ -124,18 +128,24 @@ namespace Console
 
         inline void Write(const std::initializer_list<Format>& consoleFormat, std::string_view text)
         {
-            auto formatString = std::string{ CSI };
-
-            for (const auto& fmt : consoleFormat)
+            if (vtEnabled)
             {
-                formatString.append(std::to_string(detail::to_value(fmt))).append(";");
+                auto formatString = std::string{ CSI };
+
+                for (const auto& fmt : consoleFormat)
+                {
+                    formatString.append(std::to_string(detail::to_value(fmt))).append(";");
+                }
+
+                // Replace the last ";" with "m"
+                formatString.back() = 'm';
+                std::print("{}{}", formatString, text);
+                ResetFormat();
             }
-
-            // Replace the last ";" with "m"
-            formatString.back() = 'm';
-            std::print("{}{}", formatString, text);
-
-            ResetFormat();
+            else
+            {
+                std::print("{}",text);
+            }
         }
     }
 
@@ -145,54 +155,62 @@ namespace Console
     */
 
     template <class... Args>
-    void Write(const std::format_string<Args...> format, Args&&... args) {
+    void Write(const std::format_string<Args...> format, Args&&... args)
+    {
         // Just forward to std::print
         std::print(format, std::forward<Args>(args)...);
     }
 
     template <class... Args>
-    void Write(const std::wformat_string<Args...> format, Args&&... args) {
+    void Write(const std::wformat_string<Args...> format, Args&&... args)
+    {
         // std::print does not work on wchar_t (on MSVC), but std::format does.
         std::print("{}", Util::to_string(std::format(format, std::forward<Args>(args)...)));
     }
 
     template <class... Args>
-    void Write(const std::initializer_list<Format>& consoleFormat, const std::format_string<Args...> format, Args&&... args) {
+    void Write(const std::initializer_list<Format>& consoleFormat, const std::format_string<Args...> format, Args&&... args)
+    {
         detail::Write(consoleFormat, std::format(format, std::forward<Args>(args)...));
     }
 
     template <class... Args>
-    void Write(const std::initializer_list<Format>& consoleFormat, const std::wformat_string<Args...> format, Args&&... args) {
+    void Write(const std::initializer_list<Format>& consoleFormat, const std::wformat_string<Args...> format, Args&&... args)
+    {
         detail::Write(consoleFormat, Util::to_string(std::format(format, std::forward<Args>(args)...)));
     }
 
     template <class... Args>
-    void WriteLine(const std::format_string<Args...> format, Args&&... args) {
+    void WriteLine(const std::format_string<Args...> format, Args&&... args)
+    {
         // Just forward to std::println
         std::println(format, std::forward<Args>(args)...);
     }
 
     template <class... Args>
-    void WriteLine(const std::wformat_string<Args...> format, Args&&... args) {
+    void WriteLine(const std::wformat_string<Args...> format, Args&&... args)
+    {
         // std::println does not work on wchar_t (on MSVC), but std::format does.
         std::println("{}", Util::to_string(std::format(format, std::forward<Args>(args)...)));
     }
 
     template <class... Args>
-    void WriteLine(const std::initializer_list<Format>& consoleFormat, const std::format_string<Args...> format, Args&&... args) {
+    void WriteLine(const std::initializer_list<Format>& consoleFormat, const std::format_string<Args...> format, Args&&... args)
+    {
         detail::Write(consoleFormat, std::format(format, std::forward<Args>(args)...));
         std::println("");
     }
 
     template <class... Args>
-    void WriteLine(const std::initializer_list<Format>& consoleFormat, const std::wformat_string<Args...> format, Args&&... args) {
+    void WriteLine(const std::initializer_list<Format>& consoleFormat, const std::wformat_string<Args...> format, Args&&... args)
+    {
         detail::Write(consoleFormat, Util::to_string(std::format(format, std::forward<Args>(args)...)));
         std::println("");
     }
 
      /*
      Note: I could consolidate to a single template with char type as a type parameter like this:
-    
+   
      template<typename CharT, typename... Args>
      void Write(const std::basic_format_string<CharT, std::type_identity_t<Args>...> format, Args&&... args)
      {
@@ -213,7 +231,7 @@ namespace Console
      Console::Write<char>("hello {}", "world");
      Console::Write<wchar_t>(L"hello {}", L"world");
 
-     Since this is cumbersome, I overloaded with std::format_string & std::wformat_string 
+     Since this is cumbersome, I overloaded with std::format_string & std::wformat_string
     */
 }
 

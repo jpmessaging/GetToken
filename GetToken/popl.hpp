@@ -24,7 +24,7 @@
 #define NOMINMAX
 #endif // NOMINMAX
 
-/* 
+/*
   ryusukef: if Windows.h is already included with min & max macro, defining NOMINMAX above does not help.
   Therefore, manually undefine them here.
 */

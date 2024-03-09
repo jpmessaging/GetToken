@@ -34,7 +34,7 @@ int main(int argc, char** argv)
 {
     std::ios_base::sync_with_stdio(false);
     winrt::init_apartment();
- 
+
     Console::Init();
     Console::EnableVirtualTerminal();
 
@@ -152,7 +152,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
             }
         }
     }
-    else 
+    else
     {
         Console::WriteLine(ConsoleFormat::Error, "FindAllAccountsAsync failed with {}", Util::to_string(accountsStatus));
         PrintProviderError(findResults.ProviderError());
@@ -212,13 +212,14 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         {
             PrintWebTokenResponse(requestResult.ResponseData().GetAt(0));
         }
-        else if (requestStatus == WebTokenRequestStatus::UserCancel)
-        {
-            Console::WriteLine(ConsoleFormat::Warning, "User canceled the request");
-            Trace::Write("User canceled the request");
-        }
         else
         {
+            if (requestStatus == WebTokenRequestStatus::UserCancel)
+            {
+                Console::WriteLine(ConsoleFormat::Warning, "User canceled the request");
+                Trace::Write("User canceled the request");
+            }
+
             PrintProviderError(requestResult.ResponseError());
         }
     }
@@ -254,11 +255,6 @@ IAsyncOperation<WebTokenRequestResult> InvokeRequestTokenAsync(WebTokenRequest& 
     auto interop = winrt::get_activation_factory<WebAuthenticationCoreManager, IWebAuthenticationCoreManagerInterop>();
     auto requestInspectable = static_cast<::IInspectable*>(winrt::get_abi(request));
 
-    // This anchor window does not have to be visible for WAM to show its window.
-    // However, for the WAM window to appear in front, this one needs to be shown.
-    /*ShowWindow(hwnd, SW_SHOWNORMAL);
-    UpdateWindow(hwnd);*/
-    
     auto getTokenTask = winrt::capture<IAsyncOperation<WebTokenRequestResult>>(
         interop,
         &IWebAuthenticationCoreManagerInterop::RequestTokenForWindowAsync,
@@ -383,7 +379,7 @@ void EnableTrace(const Option& option) noexcept
     auto exePath = Util::GetModulePath(nullptr);
     auto path = option.TracePath().has_value() ? std::filesystem::path{ option.TracePath().value() } : exePath.parent_path();
 
-    try 
+    try
     {
         // If the path does not exist, create it (this may throw)
         if (not std::filesystem::exists(path))
