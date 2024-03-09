@@ -1,7 +1,32 @@
+/*
+  Header-only utility library
+*/
 #pragma once
-#include "pch.h"
 
-// Header-only util library
+#include <expected>
+#include <filesystem>
+#include <string>
+
+#ifndef WIN32_MEAN_AND_LEAN
+#define WIN32_MEAN_AND_LEAN
+#endif 
+
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
+#include <Windows.h>
+
+#define SECURITY_WIN32
+#include <security.h>
+
+#include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.Foundation.Collections.h>
+#include <winrt/Windows.Security.Credentials.h>
+#include <winrt/Windows.Security.Authentication.Web.h>
+#include <winrt/Windows.Security.Authentication.Web.Core.h>
+#include <winrt/Windows.Security.Authentication.Web.Provider.h>
+
 using namespace winrt;
 using namespace Windows::Foundation;
 using namespace Windows::Security::Credentials;
@@ -119,7 +144,7 @@ namespace Util
     /// </summary>
     /// <param name="filePath">Path to the file</param>
     /// <returns>version string as std::optional</returns>
-    std::optional<std::wstring> GetFileVersion(const wchar_t* filePath) noexcept
+    inline std::optional<std::wstring> GetFileVersion(const wchar_t* filePath) noexcept
     {
         const auto size = ::GetFileVersionInfoSize(filePath, nullptr);
 
@@ -152,7 +177,7 @@ namespace Util
         return std::format(L"{}.{}.{}", major, minor, revision);
     }
 
-    std::expected<std::wstring, std::wstring> GetCurrentUserName()
+    inline std::expected<std::wstring, std::wstring> GetCurrentUserName()
     {
         auto name = std::wstring{};
         auto cch = DWORD{};
@@ -162,16 +187,17 @@ namespace Util
 
         if (ec == ERROR_MORE_DATA)
         {
+            // This cch includes terminating null
             name.resize(cch);
-            cch = name.size();
         }
 
         if (::GetUserNameExW(NameSamCompatible, name.data(), &cch))
         {
+            // This cch does NOT include terminating null
             name.resize(cch);
             return name;
         }
-        
+
         return std::unexpected<std::wstring>{ std::format(L"GetUserNameExW failed with {:#x}", static_cast<std::uint32_t>(ec)) };
     }
 

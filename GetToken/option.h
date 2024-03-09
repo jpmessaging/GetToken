@@ -1,12 +1,14 @@
 #pragma once
-#include "pch.h"
 
+#include <format>
+#include <memory>
+#include <optional>
+#include <string>
+#include <unordered_map>
+
+#include "popl.hpp"
 #include "util.h"
 #include "wam.h"
-
-#define WINDOWS
-#include "popl.hpp"
-#undef WINDOWS
 
 class Option final
 {
@@ -100,8 +102,8 @@ public:
                 if (pos != std::string::npos)
                 {
                     auto key = propValue.substr(0, pos);
-                    auto value = propValue.substr(pos + 1);
-                    map.emplace(Util::to_wstring(key), Util::to_wstring(value));
+                    auto val = propValue.substr(pos + 1);
+                    map.emplace(Util::to_wstring(key), Util::to_wstring(val));
                 }
             }
 
@@ -114,14 +116,14 @@ public:
     const std::optional<std::wstring>& TracePath() const noexcept
     {
         static auto value = [this]() {
-            auto value = std::optional<std::wstring>{};
+            auto path = std::optional<std::wstring>{};
 
             if (m_tracePath->is_set())
             {
-                value = Util::to_wstring(m_tracePath->value());
+                path = Util::to_wstring(m_tracePath->value());
             }
 
-            return value;
+            return path;
         }();
 
         return value;

@@ -1,6 +1,5 @@
 ﻿#pragma once
-#define WIN32_MEAN_AND_LEAN
-#define NOMINMAX
+
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Security.Credentials.h>
@@ -32,6 +31,4 @@
 #include <string_view>
 #include <system_error>
 
-#define WINDOWS
 #include "popl.hpp"
-#undef WINDOWS

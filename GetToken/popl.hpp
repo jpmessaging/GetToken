@@ -24,6 +24,13 @@
 #define NOMINMAX
 #endif // NOMINMAX
 
+/* 
+  ryusukef: if Windows.h is already included with min & max macro, defining NOMINMAX above does not help.
+  Therefore, manually undefine them here.
+*/
+#undef min
+#undef max
+
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
@@ -738,7 +745,7 @@ namespace popl
     template <class T>
     inline void Value<T>::parse(OptionName what_name, const char* value)
     {
-        T parsed_value;
+        T parsed_value{};
         std::string strValue;
         if (value != nullptr)
             strValue = value;

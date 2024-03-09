@@ -3,41 +3,39 @@
 #include <print>
 #include <string>
 
-#include "util.h"
+#ifndef WIN32_MEAN_AND_LEAN
+#define WIN32_MEAN_AND_LEAN
+#endif
 
-#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
-#undef WIN32_LEAN_AND_MEAN
+
+#include "util.h"
 
 namespace Console
 {
+    inline auto Init()
+    {
+        ::SetConsoleOutputCP(CP_UTF8);
+    }
+
     /// <summary>
     /// Enable Virtual Terminal
     /// </summary>
     /// <returns>bool true if successful</returns>
     inline bool EnableVirtualTerminal()
     {
-        // Set Code Page to UTF-8
-        SetConsoleOutputCP(65001);
-
-        auto hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-
-        if (hStdOut == INVALID_HANDLE_VALUE)
+        if (auto hStdOut = ::GetStdHandle(STD_OUTPUT_HANDLE); hStdOut != INVALID_HANDLE_VALUE)
         {
-            return false;
+            if (auto mode = DWORD{}; ::GetConsoleMode(hStdOut, &mode))
+            {
+                if (::SetConsoleMode(hStdOut, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
+                {
+                    return true;
+                }
+            }
         }
 
-        auto mode = DWORD{};
-
-        if (not GetConsoleMode(hStdOut, &mode))
-        {
-            return false;
-        }
-
-        if (not SetConsoleMode(hStdOut, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
-        {
-            return false;
-        }
+        return false;
     }
 
     /// <summary>
@@ -46,24 +44,18 @@ namespace Console
     /// <returns>bool true if successful</returns>
     inline bool DisableVirtualTerminal()
     {
-        auto hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-
-        if (hStdOut == INVALID_HANDLE_VALUE)
+        if (auto hStdOut = ::GetStdHandle(STD_OUTPUT_HANDLE); hStdOut != INVALID_HANDLE_VALUE)
         {
-            return false;
+            if (auto mode = DWORD{}; ::GetConsoleMode(hStdOut, &mode))
+            {
+                if (::SetConsoleMode(hStdOut, mode & ~ENABLE_VIRTUAL_TERMINAL_PROCESSING))
+                {
+                    return true;
+                }
+            }
         }
 
-        auto mode = DWORD{};
-
-        if (not GetConsoleMode(hStdOut, &mode))
-        {
-            return false;
-        }
-
-        if (not SetConsoleMode(hStdOut, mode & ~ENABLE_VIRTUAL_TERMINAL_PROCESSING))
-        {
-            return false;
-        }
+        return false;
     }
 
     /// <summary>
@@ -130,7 +122,7 @@ namespace Console
             return static_cast<typename std::underlying_type<Enum>::type>(value);
         }
 
-        void Write(const std::initializer_list<Format>& consoleFormat, std::string_view text)
+        inline void Write(const std::initializer_list<Format>& consoleFormat, std::string_view text)
         {
             auto formatString = std::string{ CSI };
 
@@ -148,8 +140,8 @@ namespace Console
     }
 
     /*
-    * Following Write/WriteLine functions are bacially thin wrappers around std::print/println with optional Console::Format parameter.
-    * Overloaded for both char & wchar_t variants.
+      Following Write/WriteLine functions are bacially thin wrappers around std::print/println with optional Console::Format parameter.
+      Overloaded for both char & wchar_t variants.
     */
 
     template <class... Args>
@@ -198,28 +190,31 @@ namespace Console
         std::println("");
     }
 
-    // Note: I could consolidate to a single template with char type as a type parameter like this:
-    //
-    // template<typename CharT, typename... Args>
-    // void Write(const std::basic_format_string<CharT, std::type_identity_t<Args>...> format, Args&&... args)
-    // {
-    //     if constexpr (std::is_same_v<CharT, char>)
-    //     {
-    //         // Just forward to std::println
-    //         std::print(format, std::forward<Args>(args)...);
-    //     }
-    //     else
-    //     {
-    //         // std::println does not work on wchar_t (on MSVC), but std::format does.
-    //         std::println("{}", Util::to_string(std::format(format, std::forward<Args>(args)...)));
-    //     }
-    // }
+     /*
+     Note: I could consolidate to a single template with char type as a type parameter like this:
     
-    // ..., but then the caller would need to specify the char type like this:
-    // Console::Write<char>("hello {}", "world");
-    // Console::Write<wchar_t>(L"hello {}", L"world");
+     template<typename CharT, typename... Args>
+     void Write(const std::basic_format_string<CharT, std::type_identity_t<Args>...> format, Args&&... args)
+     {
+         if constexpr (std::is_same_v<CharT, char>)
+         {
+             // Just forward to std::println
+             std::print(format, std::forward<Args>(args)...);
+         }
+         else
+         {
+             // std::println does not work on wchar_t (on MSVC), but std::format does.
+             std::println("{}", Util::to_string(std::format(format, std::forward<Args>(args)...)));
+         }
+     }
 
-    // Since this is cumbersome, I overloaded with std::format_string & std::wformat_string 
+     ..., but thsen the caller would nesed to specify the char type like this:
+
+     Console::Write<char>("hello {}", "world");
+     Console::Write<wchar_t>(L"hello {}", L"world");
+
+     Since this is cumbersome, I overloaded with std::format_string & std::wformat_string 
+    */
 }
 
 #undef ESC

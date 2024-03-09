@@ -22,7 +22,6 @@ HWND CreateAnchorWindow();
 void PrintWebAccount(const WebAccount& account) noexcept;
 void PrintWebTokenResponse(const WebTokenResponse& response) noexcept;
 void PrintProviderError(const WebProviderError& error) noexcept;
-void PrintBanner() noexcept;
 
 namespace ConsoleFormat
 {
@@ -36,6 +35,7 @@ int main(int argc, char** argv)
     std::ios_base::sync_with_stdio(false);
     winrt::init_apartment();
  
+    Console::Init();
     Console::EnableVirtualTerminal();
 
     auto option = ParseOption(argc, argv);
@@ -77,18 +77,13 @@ int main(int argc, char** argv)
     // RequestTokenAsync() needs to run on a UI thread
     // Note: I could simply use the console window:
     //   auto hwnd = GetAncestor(GetConsoleWindow(), GA_ROOTOWNER);
-    // However, use a new invisible window for more control.
+    // However, use a separate invisible window for more control.
     auto hwnd = CreateAnchorWindow();
-
-    // This anchor window does not have to be visible for WAM to show its window.
-    // However, for the WAM window to appear in front, this one needs to be shown.
-    ShowWindow(hwnd, SW_SHOWNORMAL);
-    UpdateWindow(hwnd);
 
     // Start the main async task.
     // When the task completes, destroy the window to break from the message loop
     auto task = MainAsync(*option, hwnd);
-    task.Completed([hwnd](auto&& async, AsyncStatus status) { SendMessage(hwnd, WM_DESTROY, 0, 0); });
+    task.Completed([hwnd](auto&& /*async*/, AsyncStatus /*status*/) { SendMessage(hwnd, WM_DESTROY, 0, 0); });
 
     // Run the message loop till the async task completes.
     auto msg = MSG{};
@@ -259,6 +254,11 @@ IAsyncOperation<WebTokenRequestResult> InvokeRequestTokenAsync(WebTokenRequest& 
     auto interop = winrt::get_activation_factory<WebAuthenticationCoreManager, IWebAuthenticationCoreManagerInterop>();
     auto requestInspectable = static_cast<::IInspectable*>(winrt::get_abi(request));
 
+    // This anchor window does not have to be visible for WAM to show its window.
+    // However, for the WAM window to appear in front, this one needs to be shown.
+    /*ShowWindow(hwnd, SW_SHOWNORMAL);
+    UpdateWindow(hwnd);*/
+    
     auto getTokenTask = winrt::capture<IAsyncOperation<WebTokenRequestResult>>(
         interop,
         &IWebAuthenticationCoreManagerInterop::RequestTokenForWindowAsync,
@@ -341,13 +341,15 @@ HWND CreateAnchorWindow()
     auto width = 0;
     auto height = 0;
 
+    auto hwndConsole = GetAncestor(GetConsoleWindow(), GA_ROOTOWNER);
+
     auto hwnd = CreateWindowExW(
         0,
         wndclass.lpszClassName,
         L"Anchor Window",
-        WS_POPUP, // WS_OVERLAPPED, 
+        WS_POPUP,
         x, y, width, height,
-        nullptr,
+        hwndConsole, // hWndParent
         nullptr,
         GetModuleHandle(NULL),
         nullptr);
@@ -376,27 +378,6 @@ void PrintWebAccount(const WebAccount& account) noexcept
     }
 }
 
-/// <summary>
-/// Print file name and vesrion
-/// </summary>
-void PrintBanner() noexcept
-{
-    //Get this executable file name & version
-    static const auto exeName = []() {
-        const auto exePath = Util::GetModulePath(nullptr).string();
-        return exePath.substr(exePath.rfind('\\') + 1);
-    }();
-
-    static const auto version = []() {
-        const auto exePath = Util::GetModulePath(nullptr).wstring();
-        auto version = Util::GetFileVersion(exePath.data());
-        return Util::to_string(version.value_or(L""));
-    }();
-
-    Console::WriteLine(ConsoleFormat::Verbose, "{} (version {})\n", exeName, version);
-    Trace::Write("{} (version {}), PID: {}\n", exeName, version, GetCurrentProcessId());
-}
-
 void EnableTrace(const Option& option) noexcept
 {
     auto exePath = Util::GetModulePath(nullptr);
@@ -404,7 +385,7 @@ void EnableTrace(const Option& option) noexcept
 
     try 
     {
-        // If the path does not exist, create it (This may throw)
+        // If the path does not exist, create it (this may throw)
         if (not std::filesystem::exists(path))
         {
             std::filesystem::create_directory(path);
@@ -424,7 +405,7 @@ void EnableTrace(const Option& option) noexcept
     }
     catch (const std::exception& e)
     {
-        Console::WriteLine(ConsoleFormat::Error, "Failed to create a trace folder {}", path.string());
+        Console::WriteLine(ConsoleFormat::Error, "Failed to create a trace folder {}. {}", path.string(), e.what());
     }
 }
 
