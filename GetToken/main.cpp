@@ -467,13 +467,3 @@ namespace Logger
         Console::WriteLine(consoleFormat, L"{}", message);
     }
 }
-
-// refs:
-// https://stackoverflow.com/questions/59994731/how-can-i-programmatically-force-an-iasyncoperation-into-the-error-state
-// https://stackoverflow.com/questions/42812444/gettokensilentlyasync-doesnt-execute
-// https://github.com/CommunityToolkit/Graph-Controls/blob/main/CommunityToolkit.Authentication.Uwp/WindowsProvider.cs
-// https://github.com/microsoft/Windows-universal-samples/tree/main/Samples/WebAccountManagement/cpp
-// https://kennykerrca.wordpress.com/2018/03/08/cppwinrt-handling-async-completion/
-
-// AppProperties
-// https://github.com/MicrosoftDocs/windows-dev-docs/blob/docs/uwp/security/web-account-manager.md
