@@ -6,6 +6,7 @@
 #include "util.h"
 #include "wam.h"
 
+using namespace winrt;
 using namespace Windows::Foundation;
 using namespace Windows::Security::Credentials;
 using namespace Windows::Security::Authentication::Web::Core;
@@ -17,7 +18,7 @@ auto ParseOption(int argc, char** argv) noexcept -> std::expected<Option, std::s
 void EnableTrace(const Option& option) noexcept;
 auto MainAsync(const Option& option, const HWND hwnd) -> IAsyncOperation<int>;
 auto GetWebTokenRequest(const WebAccountProvider& provider, WebTokenRequestPromptType promptType, const Option& option) -> WebTokenRequest;
-auto InvokeRequestTokenAsync(WebTokenRequest& request, HWND hwnd) -> IAsyncOperation<WebTokenRequestResult>;
+auto InvokeRequestTokenAsync(const WebTokenRequest& request, HWND hwnd) -> IAsyncOperation<WebTokenRequestResult>;
 HWND CreateAnchorWindow();
 void PrintWebAccount(const WebAccount& account) noexcept;
 void PrintWebTokenResponse(const WebTokenResponse& response) noexcept;
@@ -170,9 +171,9 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         Console::WriteLine(ConsoleFormat::Verbose, "Invoking WebAuthenticationCoreManager::GetTokenSilentlyAsync ...\n");
         Trace::Write("Invoking WebAuthenticationCoreManager::GetTokenSilentlyAsync ...");
 
-        auto request = GetWebTokenRequest(provider, WebTokenRequestPromptType::Default, option);
+        const auto request = GetWebTokenRequest(provider, WebTokenRequestPromptType::Default, option);
 
-        const auto& requestResult = co_await WebAuthenticationCoreManager::GetTokenSilentlyAsync(request);
+        const auto requestResult = co_await WebAuthenticationCoreManager::GetTokenSilentlyAsync(request);
         const auto requestStatus = requestResult.ResponseStatus();
 
         Console::WriteLine("GetTokenSilentlyAsync returned {}", Util::to_string(requestStatus));
@@ -190,7 +191,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     catch (const winrt::hresult_error& e)
     {
         // https://learn.microsoft.com/en-us/windows/uwp/cpp-and-winrt-apis/error-handling
-        Console::WriteLine(ConsoleFormat::Error, L"GetTokenSilentlyAsync failed with an exception. code:{:#x}, message:{}", static_cast<std::uint32_t>(e.code().value), e.message());
+        Console::WriteLine(ConsoleFormat::Error, L"GetTokenSilentlyAsync failed with an exception. code:{:#x}; message:{}", static_cast<std::uint32_t>(e.code()), e.message());
         Trace::Write(L"GetTokenSilentlyAsync failed with an exception. code:{:#x}, message:{}", static_cast<std::uint32_t>(e.code().value), e.message());
     }
 
@@ -202,13 +203,13 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         Trace::Write("Invoking WebAuthenticationCoreManager::RequestTokenAsync ...");
 
         // Use ForceAuthentication here to show UI regardless of auth state.
-        auto request = GetWebTokenRequest(provider, WebTokenRequestPromptType::ForceAuthentication, option);
+        const auto request = GetWebTokenRequest(provider, WebTokenRequestPromptType::ForceAuthentication, option);
 
-        const auto& requestResult = co_await InvokeRequestTokenAsync(request, hwnd);
+        const auto requestResult = co_await InvokeRequestTokenAsync(request, hwnd);
         auto requestStatus = requestResult.ResponseStatus();
 
         Console::WriteLine("RequestTokenAsync returned {}\n", Util::to_string(requestStatus));
-        Trace::Write(L"RequestTokenAsync returned {}\n", Util::to_wstring(requestStatus));
+        Trace::Write("RequestTokenAsync returned {}\n", Util::to_string(requestStatus));
 
         if (requestStatus == WebTokenRequestStatus::Success)
         {
@@ -227,8 +228,8 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     }
     catch (const winrt::hresult_error& e)
     {
-        Console::WriteLine(ConsoleFormat::Error, L"RequestTokenAsync failed with an exception. code:{:#x}, message:{}", static_cast<std::uint32_t>(e.code().value), e.message());
-        Trace::Write(L"RequestTokenAsync failed with an exception. code:{:#x}, message:{}", static_cast<std::uint32_t>(e.code().value), e.message());
+        Console::WriteLine(ConsoleFormat::Error, L"RequestTokenAsync failed with an exception. code:{:#x}; message:{}", static_cast<std::uint32_t>(e.code()), e.message());
+        Trace::Write(L"RequestTokenAsync failed with an exception. code:{:#x}, message:{}", static_cast<std::uint32_t>(e.code()), e.message());
     }
 }
 
@@ -250,7 +251,7 @@ WebTokenRequest GetWebTokenRequest(const WebAccountProvider& provider, const Web
     return request;
 }
 
-IAsyncOperation<WebTokenRequestResult> InvokeRequestTokenAsync(WebTokenRequest& request, const HWND hwnd)
+IAsyncOperation<WebTokenRequestResult> InvokeRequestTokenAsync(const WebTokenRequest& request, const HWND hwnd)
 {
     // Invoke RequestTokenAsync() via IWebAuthenticationCoreManagerInterop::RequestTokenForWindowAsync()
     // https://devblogs.microsoft.com/oldnewthing/20210805-00/?p=105520
@@ -280,13 +281,8 @@ void PrintWebTokenResponse(const WebTokenResponse& response) noexcept
         Trace::Write(L"  [{},{}]", key, value);
     }
 
-    auto provError = response.ProviderError();
-
-    if (provError)
-    {
-        Console::WriteLine(ConsoleFormat::Error, L"ErrorCode: {:#x}, ErrorMessage: {}", static_cast<std::uint32_t>(provError.ErrorCode()), provError.ErrorMessage());
-        Trace::Write(L"ErrorCode: {:#x}, ErrorMessage: {}", static_cast<std::uint32_t>(provError.ErrorCode()), provError.ErrorMessage());
-    }
+    // Print response's error if any
+    PrintProviderError(response.ProviderError());
 }
 
 void PrintProviderError(const WebProviderError& error) noexcept
@@ -294,8 +290,8 @@ void PrintProviderError(const WebProviderError& error) noexcept
     // ResponseError might be null (e.g. when status is WebTokenRequestStatus::UserCancel)
     if (error)
     {
-        Console::WriteLine(ConsoleFormat::Error, L"ErrorCode: {:#x}, ErrorMessage: {}", static_cast<std::uint32_t>(error.ErrorCode()), error.ErrorMessage());
-        Trace::Write(L"ErrorCode: {:#x}, ErrorMessage: {}", static_cast<std::uint32_t>(error.ErrorCode()), error.ErrorMessage());
+        Console::WriteLine(ConsoleFormat::Error, L"ErrorCode: {:#x}; ErrorMessage: {}", static_cast<std::uint32_t>(error.ErrorCode()), error.ErrorMessage());
+        Trace::Write(L"ErrorCode: {:#x}; ErrorMessage: {}", static_cast<std::uint32_t>(error.ErrorCode()), error.ErrorMessage());
     }
 }
 

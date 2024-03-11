@@ -21,7 +21,7 @@ namespace Console
     namespace detail
     {
         // State of Virtual Terminal
-        auto vtEnabled = false;
+        inline auto vtEnabled = false;
 
         inline bool SetVirtualTerminal(bool enable)
         {

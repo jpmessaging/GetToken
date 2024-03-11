@@ -27,9 +27,9 @@ namespace Diagnostics::detail
     {
         DWORD ThreadId = 0;
         std::chrono::system_clock::time_point Time;
-        std::wstring Message;
+        std::string Message;
 
-        explicit TraceData(const std::wstring_view message)
+        explicit TraceData(const std::string_view message)
             : ThreadId{ GetCurrentThreadId() }, Time{ std::chrono::system_clock::now() }, Message{ message }
         {}
     };
@@ -39,7 +39,7 @@ namespace Diagnostics::detail
     public:
         explicit CsvTracer(const std::filesystem::path& filePath);
         ~CsvTracer();
-        auto Write(std::wstring_view message) -> void;
+        auto Write(std::string_view message) -> void;
 
     private:
         auto WriteAllMessages() -> void;
@@ -98,7 +98,7 @@ namespace Diagnostics::detail
         }
     }
 
-    inline auto CsvTracer::Write(std::wstring_view message) -> void
+    inline auto CsvTracer::Write(std::string_view message) -> void
     {
         Concurrency::send(_buffer, std::make_shared<TraceData>(message));
         SetEvent(_hBuffReady.get());
@@ -120,97 +120,73 @@ namespace Diagnostics::detail
                     c = '\'';
             }
 
-            auto view = message.ends_with('\n') ?
-                std::wstring_view{ message.begin(), message.end() - 1 } :
-                std::wstring_view{ message.begin(), message.end() };
+            auto view = std::string_view{ message };
 
-            auto formatted = std::format(L"{0:%F}T{0:%T%z},{1},\"{2}\"\n", data->Time, data->ThreadId, view);
-            auto utf8Str = Util::to_string(formatted);
+            if (view.ends_with('\n'))
+            {
+                view.remove_suffix(1);
+            }
 
-            ::WriteFile(_hFile.get(), utf8Str.data(), static_cast<DWORD>(utf8Str.size()), &writtenCount, nullptr);
+            auto formatted = std::format("{0:%F}T{0:%T%z},{1},\"{2}\"\n", data->Time, data->ThreadId, view);
+            ::WriteFile(_hFile.get(), formatted.data(), static_cast<DWORD>(formatted.size()), &writtenCount, nullptr);
         }
     }
 #pragma endregion CsvTracer member definitions
-} // end of namespace Diagnostics::detail
 
-namespace Diagnostics::Trace
-{
-    inline auto Enabled() -> bool;
-}
-
-namespace Diagnostics::detail
-{
     inline std::optional<CsvTracer> _tracer = std::nullopt;
 
-    inline auto Write(std::wstring_view message) -> void
+    inline auto Write(std::string_view message) -> void
     {
-        if (Diagnostics::Trace::Enabled())
+        if (_tracer)
         {
             _tracer->Write(message);
         }
     }
 
-    inline auto Write(std::string_view message) -> void
+    inline auto Write(std::wstring_view message) -> void
     {
-        if ((Diagnostics::Trace::Enabled()))
+        if (_tracer)
         {
-            Write(Util::to_wstring(message));
+            _tracer->Write(Util::to_string(message));
         }
     }
-}
+} // end of namespace Diagnostics::detail
 
 namespace Diagnostics::Trace
 {
-        inline auto Enable(std::wstring_view path) -> void
+        inline void Enable(std::wstring_view path)
         {
-            if (detail::_tracer) 
+            if (detail::_tracer)
+            {
                 throw std::runtime_error{ std::format("Trace has been already initialized with {}", Util::to_string(path)) };
+            }
 
             detail::_tracer.emplace(path);
         }
 
-        inline auto Disable() -> void
+        inline void Disable()
         {
             if (detail::_tracer)
+            {
                 detail::_tracer.reset();
+            }
         }
 
-        inline auto Enabled() -> bool
+        inline bool Enabled()
         {
             return detail::_tracer.has_value();
         }
 
         template <class... Args>
-        void Write(const std::format_string<Args...> format, Args&&... args) 
+        void Write(const std::format_string<Args...> format, Args&&... args)
         {
             Diagnostics::detail::Write(std::format(format, std::forward<Args>(args)...));
         }
 
         template <class... Args>
-        void Write(const std::wformat_string<Args...> format, Args&&... args) {
-
+        void Write(const std::wformat_string<Args...> format, Args&&... args)
+        {
             Diagnostics::detail::Write(std::format(format, std::forward<Args>(args)...));
         }
 } // end of namespace Diagnostics::Trace
-
-//namespace Diagnostics::detail
-//{
-//    inline std::optional<CsvTracer> _tracer = std::nullopt;
-//
-//    inline auto Write(std::wstring_view message) -> void
-//    {
-//        if (Diagnostics::Trace::Enabled())
-//        {
-//            _tracer->Write(message);
-//        }
-//    }
-//
-//    inline auto Write(std::string_view message) -> void
-//    {
-//        if ((::Trace::Enabled()))
-//        {
-//            Write(Util::to_wstring(message));
-//        }
-//    }
-//}
 #endif

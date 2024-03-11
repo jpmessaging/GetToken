@@ -52,7 +52,7 @@ namespace Util::detail
         MAPENTRY(FindAllWebAccountsStatus::NotSupportedByProvider)
     };
 
-    inline extern const auto WebTokenRequestStatusMap = std::unordered_map<WebTokenRequestStatus, const char*>
+    inline extern const auto WebTokenRequestStatusMap = std::unordered_map<WebTokenRequestStatus, std::string>
     {
         MAPENTRY(WebTokenRequestStatus::AccountProviderNotAvailable),
         MAPENTRY(WebTokenRequestStatus::AccountSwitch),
@@ -95,32 +95,32 @@ namespace Util
         return wstr;
     }
 
-    inline std::string to_string(WebAccountState accountState) noexcept
+    inline const std::string& to_string(WebAccountState accountState) noexcept
     {
         return detail::WebAccountStateMap.at(accountState);
     }
 
-    inline std::wstring to_wstring(WebAccountState accountState) noexcept
+    inline const std::wstring to_wstring(WebAccountState accountState) noexcept
     {
         return to_wstring(detail::WebAccountStateMap.at(accountState));
     }
 
-    inline std::string to_string(FindAllWebAccountsStatus status) noexcept
+    inline const std::string& to_string(FindAllWebAccountsStatus status) noexcept
     {
         return detail::FindAllWebAccountsStatusMap.at(status);
     }
 
-    inline std::wstring to_wstring(FindAllWebAccountsStatus status) noexcept
+    inline const std::wstring to_wstring(FindAllWebAccountsStatus status) noexcept
     {
         return to_wstring(detail::FindAllWebAccountsStatusMap.at(status));
     }
 
-    inline std::string to_string(WebTokenRequestStatus status) noexcept
+    inline const std::string& to_string(WebTokenRequestStatus status) noexcept
     {
         return detail::WebTokenRequestStatusMap.at(status);
     }
 
-    inline std::wstring to_wstring(WebTokenRequestStatus status) noexcept
+    inline const std::wstring to_wstring(WebTokenRequestStatus status) noexcept
     {
         return to_wstring(detail::WebTokenRequestStatusMap.at(status));
     }
