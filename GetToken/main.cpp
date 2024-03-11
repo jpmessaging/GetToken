@@ -180,7 +180,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
 
         const auto request = GetWebTokenRequest(provider, WebTokenRequestPromptType::Default, option);
 
-        const auto requestResult = co_await WebAuthenticationCoreManager::GetTokenSilentlyAsync(request);
+        const auto& requestResult = co_await WebAuthenticationCoreManager::GetTokenSilentlyAsync(request);
         const auto requestStatus = requestResult.ResponseStatus();
 
         Logger::WriteLine("GetTokenSilentlyAsync's ResponseStatus: {}", Util::to_string(requestStatus));
@@ -209,10 +209,10 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         // Use ForceAuthentication here to show UI regardless of auth state.
         const auto request = GetWebTokenRequest(provider, WebTokenRequestPromptType::ForceAuthentication, option);
 
-        const auto requestResult = co_await InvokeRequestTokenAsync(request, hwnd);
+        const auto& requestResult = co_await InvokeRequestTokenAsync(request, hwnd);
         auto requestStatus = requestResult.ResponseStatus();
 
-        Logger::WriteLine("RequestTokenAsync's ResponseStatus:{}", Util::to_string(requestStatus));
+        Logger::WriteLine("RequestTokenAsync's ResponseStatus: {}", Util::to_string(requestStatus));
 
         if (requestStatus == WebTokenRequestStatus::Success)
         {
