@@ -154,54 +154,54 @@ namespace Console
       Overloaded for both char & wchar_t variants.
     */
 
-    template <class... Args>
+    template <typename... Args>
     void Write(const std::format_string<Args...> format, Args&&... args)
     {
         // Just forward to std::print
         std::print(format, std::forward<Args>(args)...);
     }
 
-    template <class... Args>
+    template <typename... Args>
     void Write(const std::wformat_string<Args...> format, Args&&... args)
     {
         // std::print does not work on wchar_t (on MSVC), but std::format does.
         std::print("{}", Util::to_string(std::format(format, std::forward<Args>(args)...)));
     }
 
-    template <class... Args>
+    template <typename... Args>
     void Write(const std::initializer_list<Format>& consoleFormat, const std::format_string<Args...> format, Args&&... args)
     {
         detail::Write(consoleFormat, std::format(format, std::forward<Args>(args)...));
     }
 
-    template <class... Args>
+    template <typename... Args>
     void Write(const std::initializer_list<Format>& consoleFormat, const std::wformat_string<Args...> format, Args&&... args)
     {
         detail::Write(consoleFormat, Util::to_string(std::format(format, std::forward<Args>(args)...)));
     }
 
-    template <class... Args>
+    template <typename... Args>
     void WriteLine(const std::format_string<Args...> format, Args&&... args)
     {
         // Just forward to std::println
         std::println(format, std::forward<Args>(args)...);
     }
 
-    template <class... Args>
+    template <typename... Args>
     void WriteLine(const std::wformat_string<Args...> format, Args&&... args)
     {
         // std::println does not work on wchar_t (on MSVC), but std::format does.
         std::println("{}", Util::to_string(std::format(format, std::forward<Args>(args)...)));
     }
 
-    template <class... Args>
+    template <typename... Args>
     void WriteLine(const std::initializer_list<Format>& consoleFormat, const std::format_string<Args...> format, Args&&... args)
     {
         detail::Write(consoleFormat, std::format(format, std::forward<Args>(args)...));
         std::println("");
     }
 
-    template <class... Args>
+    template <typename... Args>
     void WriteLine(const std::initializer_list<Format>& consoleFormat, const std::wformat_string<Args...> format, Args&&... args)
     {
         detail::Write(consoleFormat, Util::to_string(std::format(format, std::forward<Args>(args)...)));

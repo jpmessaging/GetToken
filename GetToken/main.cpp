@@ -24,6 +24,22 @@ void PrintWebAccount(const WebAccount& account) noexcept;
 void PrintWebTokenResponse(const WebTokenResponse& response) noexcept;
 void PrintProviderError(const WebProviderError& error) noexcept;
 
+// Logger writes to both console & trace file
+namespace Logger
+{
+    template <typename... Args>
+    void WriteLine(const std::format_string<Args...> format, Args&&... args) noexcept;
+
+    template <typename... Args>
+    void WriteLine(const std::initializer_list<Console::Format>& consoleFormat, const std::format_string<Args...> format, Args&&... args) noexcept;
+
+    template <typename... Args>
+    void WriteLine(const std::wformat_string<Args...> format, Args&&... args) noexcept;
+
+    template <typename... Args>
+    void WriteLine(const std::initializer_list<Console::Format>& consoleFormat, const std::wformat_string<Args...> format, Args&&... args) noexcept;
+}
+
 namespace ConsoleFormat
 {
     constexpr auto Error = { Console::Format::ForegroundRed, Console::Format::Bright };
@@ -84,7 +100,7 @@ int main(int argc, char** argv)
     auto hwnd = CreateAnchorWindow();
 
     // Start the main async task.
-    // When the task completes, destroy the window to break from the message loop
+    // When the task completes, destroy the window to exit message loop
     auto task = MainAsync(*option, hwnd);
     task.Completed([hwnd](auto&& /*async*/, AsyncStatus /*status*/) { SendMessage(hwnd, WM_DESTROY, 0, 0); });
 
@@ -107,18 +123,14 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
 
     if (not provider)
     {
-        Console::WriteLine(ConsoleFormat::Error, LR"(FindAccountProviderAsync failed to find Provider "{}")", WAM::ProviderId::MICROSOFT);
-        Trace::Write(LR"(FindAccountProviderAsync failed to find Provider "{}")", WAM::ProviderId::MICROSOFT);
-
+        Logger::WriteLine(ConsoleFormat::Error, LR"(FindAccountProviderAsync failed to find Provider "{}")", WAM::ProviderId::MICROSOFT);
         co_return 1;
     }
 
-    Console::WriteLine("Provider:");
-    Console::WriteLine(L"  ID: {}", provider.Id());
-    Console::WriteLine(LR"(  DisplayName: "{}")", provider.DisplayName());
-    Console::WriteLine("");
-
-    Trace::Write(LR"(Provider: {}; DisplayName: "{}")", provider.Id(), provider.DisplayName());
+    Logger::WriteLine("Provider:");
+    Logger::WriteLine(L"  ID: {}", provider.Id());
+    Logger::WriteLine(LR"(  DisplayName: "{}")", provider.DisplayName());
+    Logger::WriteLine("");
 
     /*
     * Find Web Accounts
@@ -131,53 +143,48 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     if (accountsStatus == FindAllWebAccountsStatus::Success)
     {
         auto accounts = findResults.Accounts();
-        Trace::Write("Found {} web account(s)", accounts.Size());
 
         if (accounts.Size() == 0)
         {
-            Console::Write("No accounts were found");
+            Logger::WriteLine("No accounts were found");
         }
         else
         {
-            Console::WriteLine("Found {} web account(s):", accounts.Size());
+            Logger::WriteLine("Found {} web account(s):", accounts.Size());
         }
 
         // Print account properties
         for (const auto& account : accounts)
         {
             PrintWebAccount(account);
+            Logger::WriteLine("");
 
             if (option.SignOut())
             {
-                Console::WriteLine(ConsoleFormat::Warning, "\n  Signing out from this account ... ");
-                Trace::Write(L"Signing out of account {}", account.Id());
+                Logger::WriteLine(ConsoleFormat::Warning, "  Signing out from this account ... ");
                 account.SignOutAsync().get();
             }
         }
     }
     else
     {
-        Console::WriteLine(ConsoleFormat::Error, "FindAllAccountsAsync failed with {}", Util::to_string(accountsStatus));
+        Logger::WriteLine(ConsoleFormat::Error, "FindAllAccountsAsync failed with {}", Util::to_string(accountsStatus));
         PrintProviderError(findResults.ProviderError());
     }
-
-    Console::WriteLine("");
 
     /*
     * Request a token
     */
     try
     {
-        Console::WriteLine(ConsoleFormat::Verbose, "Invoking WebAuthenticationCoreManager::GetTokenSilentlyAsync ...\n");
-        Trace::Write("Invoking WebAuthenticationCoreManager::GetTokenSilentlyAsync ...");
+        Logger::WriteLine(ConsoleFormat::Verbose, "Invoking WebAuthenticationCoreManager::GetTokenSilentlyAsync ...");
 
         const auto request = GetWebTokenRequest(provider, WebTokenRequestPromptType::Default, option);
 
         const auto requestResult = co_await WebAuthenticationCoreManager::GetTokenSilentlyAsync(request);
         const auto requestStatus = requestResult.ResponseStatus();
 
-        Console::WriteLine("GetTokenSilentlyAsync returned {}", Util::to_string(requestStatus));
-        Trace::Write("GetTokenSilentlyAsync returned {}", Util::to_string(requestStatus));
+        Logger::WriteLine("GetTokenSilentlyAsync returned {}", Util::to_string(requestStatus));
 
         if (requestStatus == WebTokenRequestStatus::Success)
         {
@@ -191,16 +198,14 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     catch (const winrt::hresult_error& e)
     {
         // https://learn.microsoft.com/en-us/windows/uwp/cpp-and-winrt-apis/error-handling
-        Console::WriteLine(ConsoleFormat::Error, L"GetTokenSilentlyAsync failed with an exception. code:{:#x}; message:{}", static_cast<std::uint32_t>(e.code()), e.message());
-        Trace::Write(L"GetTokenSilentlyAsync failed with an exception. code:{:#x}, message:{}", static_cast<std::uint32_t>(e.code().value), e.message());
+        Logger::WriteLine(ConsoleFormat::Error, L"GetTokenSilentlyAsync failed with an exception. code:{:#x}; message:{}", static_cast<std::uint32_t>(e.code()), e.message());
     }
 
     Console::WriteLine("");
 
     try
     {
-        Console::WriteLine(ConsoleFormat::Verbose, "Invoking WebAuthenticationCoreManager::RequestTokenAsync ...\n");
-        Trace::Write("Invoking WebAuthenticationCoreManager::RequestTokenAsync ...");
+        Logger::WriteLine(ConsoleFormat::Verbose, "Invoking WebAuthenticationCoreManager::RequestTokenAsync ...");
 
         // Use ForceAuthentication here to show UI regardless of auth state.
         const auto request = GetWebTokenRequest(provider, WebTokenRequestPromptType::ForceAuthentication, option);
@@ -208,8 +213,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         const auto requestResult = co_await InvokeRequestTokenAsync(request, hwnd);
         auto requestStatus = requestResult.ResponseStatus();
 
-        Console::WriteLine("RequestTokenAsync returned {}\n", Util::to_string(requestStatus));
-        Trace::Write("RequestTokenAsync returned {}\n", Util::to_string(requestStatus));
+        Logger::WriteLine("RequestTokenAsync returned {}", Util::to_string(requestStatus));
 
         if (requestStatus == WebTokenRequestStatus::Success)
         {
@@ -219,8 +223,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         {
             if (requestStatus == WebTokenRequestStatus::UserCancel)
             {
-                Console::WriteLine(ConsoleFormat::Warning, "User canceled the request");
-                Trace::Write("User canceled the request");
+                Logger::WriteLine(ConsoleFormat::Warning, "User canceled the request");
             }
 
             PrintProviderError(requestResult.ResponseError());
@@ -228,8 +231,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     }
     catch (const winrt::hresult_error& e)
     {
-        Console::WriteLine(ConsoleFormat::Error, L"RequestTokenAsync failed with an exception. code:{:#x}; message:{}", static_cast<std::uint32_t>(e.code()), e.message());
-        Trace::Write(L"RequestTokenAsync failed with an exception. code:{:#x}, message:{}", static_cast<std::uint32_t>(e.code()), e.message());
+        Logger::WriteLine(ConsoleFormat::Error, L"RequestTokenAsync failed with an exception. code:{:#x}; message:{}", static_cast<std::uint32_t>(e.code()), e.message());
     }
 }
 
@@ -269,16 +271,12 @@ IAsyncOperation<WebTokenRequestResult> InvokeRequestTokenAsync(const WebTokenReq
 
 void PrintWebTokenResponse(const WebTokenResponse& response) noexcept
 {
-    Console::WriteLine(L"  WebAccount Id:{}", response.WebAccount().Id());
-    Console::WriteLine("  WebTokenResponse Properties:\n");
-
-    Trace::Write(L"WebAccount Id:{}", response.WebAccount().Id());
-    Trace::Write("WebTokenResponse Properties:");
+    Logger::WriteLine(L"  WebAccount Id:{}", response.WebAccount().Id());
+    Logger::WriteLine("  WebTokenResponse Properties:\n");
 
     for (const auto& [key, value] : response.Properties())
     {
-        Console::WriteLine(L"  [{},{}]", key, value);
-        Trace::Write(L"  [{},{}]", key, value);
+        Logger::WriteLine(L"  [{},{}]", key, value);
     }
 
     // Print response's error if any
@@ -290,8 +288,7 @@ void PrintProviderError(const WebProviderError& error) noexcept
     // ResponseError might be null (e.g. when status is WebTokenRequestStatus::UserCancel)
     if (error)
     {
-        Console::WriteLine(ConsoleFormat::Error, L"ErrorCode: {:#x}; ErrorMessage: {}", static_cast<std::uint32_t>(error.ErrorCode()), error.ErrorMessage());
-        Trace::Write(L"ErrorCode: {:#x}; ErrorMessage: {}", static_cast<std::uint32_t>(error.ErrorCode()), error.ErrorMessage());
+        Logger::WriteLine(ConsoleFormat::Error, L"ErrorCode: {:#x}; ErrorMessage: {}", static_cast<std::uint32_t>(error.ErrorCode()), error.ErrorMessage());
     }
 }
 
@@ -358,17 +355,13 @@ HWND CreateAnchorWindow()
 
 void PrintWebAccount(const WebAccount& account) noexcept
 {
-    Trace::Write(L"Account Id: {}, State: {}", account.Id(), Util::to_wstring(account.State()));
-
-    Console::WriteLine("");
-    Console::WriteLine(L"  ID: {}", account.Id());
-    Console::WriteLine("  State: {}", Util::to_string(account.State()));
-    Console::WriteLine("  Properties:");
+    Logger::WriteLine(L"  ID: {}", account.Id());
+    Logger::WriteLine("  State: {}", Util::to_string(account.State()));
+    Logger::WriteLine("  Properties:");
 
     for (const auto& [key, value] : account.Properties())
     {
-        Console::WriteLine(L"  [{},{}]", key, value);
-        Trace::Write(L"  [{},{}]", key, value);
+        Logger::WriteLine(L"  [{},{}]", key, value);
     }
 }
 
@@ -436,6 +429,44 @@ std::expected<Option, std::string> ParseOption(int argc, char** argv) noexcept
     }
 
     return std::move(*option);
+}
+
+namespace Logger
+{
+    /// <summary>
+    /// Write message to both console & log file
+    /// </summary>
+    template <typename... Args>
+    void WriteLine(const std::format_string<Args...> format, Args&&... args) noexcept
+    {
+        auto message = std::format(format, std::forward<Args>(args)...);
+        Console::WriteLine("{}", message);
+        Trace::Write("{}", message);
+    }
+
+    template <typename... Args>
+    void WriteLine(const std::initializer_list<Console::Format>& consoleFormat, const std::format_string<Args...> format, Args&&... args) noexcept
+    {
+        auto message = std::format(format, std::forward<Args>(args)...);
+        Trace::Write("{}", message);
+        Console::WriteLine(consoleFormat, "{}", message);
+    }
+
+    template <typename... Args>
+    void WriteLine(const std::wformat_string<Args...> format, Args&&... args) noexcept
+    {
+        auto message = std::format(format, std::forward<Args>(args)...);
+        Trace::Write(L"{}", message);
+        Console::WriteLine(L"{}", message);
+    }
+
+    template <typename... Args>
+    void WriteLine(const std::initializer_list<Console::Format>& consoleFormat, const std::wformat_string<Args...> format, Args&&... args) noexcept
+    {
+        auto message = std::format(format, std::forward<Args>(args)...);
+        Trace::Write(L"{}", message);
+        Console::WriteLine(consoleFormat, L"{}", message);
+    }
 }
 
 // refs:
