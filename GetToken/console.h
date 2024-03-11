@@ -100,7 +100,7 @@ namespace Console
 
 #define ESC "\x1b"
 #define CSI ESC "[" // Control Sequence Introducer
-#define OSC ESC "]" // Operating system command
+#define OSC ESC "]" // Operating System Command
 
     /// <summary>
     /// Reset certain properties (Rendition, Charset, Cursor Keys Mode, etc.) to their default values
@@ -110,11 +110,13 @@ namespace Console
         std::print(CSI "!p");
     }
 
+    /// <summary>
+    /// Returns all attributes to the default state prior to modification
+    /// </summary>
     inline void ResetFormat()
     {
         std::print(CSI "0m");
     }
-
 
     namespace detail {
         /// <summary>
@@ -210,7 +212,7 @@ namespace Console
 
      /*
      Note: I could consolidate to a single template with char type as a type parameter like this:
-   
+
      template<typename CharT, typename... Args>
      void Write(const std::basic_format_string<CharT, std::type_identity_t<Args>...> format, Args&&... args)
      {
@@ -226,7 +228,7 @@ namespace Console
          }
      }
 
-     ..., but thsen the caller would nesed to specify the char type like this:
+     But then the caller would need to specify the char type like this:
 
      Console::Write<char>("hello {}", "world");
      Console::Write<wchar_t>(L"hello {}", L"world");
