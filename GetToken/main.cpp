@@ -10,7 +10,6 @@ using namespace winrt;
 using namespace Windows::Foundation;
 using namespace Windows::Security::Credentials;
 using namespace Windows::Security::Authentication::Web::Core;
-
 using namespace Diagnostics;
 
 // Forward declarations
@@ -184,7 +183,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         const auto requestResult = co_await WebAuthenticationCoreManager::GetTokenSilentlyAsync(request);
         const auto requestStatus = requestResult.ResponseStatus();
 
-        Logger::WriteLine("GetTokenSilentlyAsync returned {}", Util::to_string(requestStatus));
+        Logger::WriteLine("GetTokenSilentlyAsync's ResponseStatus: {}", Util::to_string(requestStatus));
 
         if (requestStatus == WebTokenRequestStatus::Success)
         {
@@ -213,7 +212,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         const auto requestResult = co_await InvokeRequestTokenAsync(request, hwnd);
         auto requestStatus = requestResult.ResponseStatus();
 
-        Logger::WriteLine("RequestTokenAsync returned {}", Util::to_string(requestStatus));
+        Logger::WriteLine("RequestTokenAsync's ResponseStatus:{}", Util::to_string(requestStatus));
 
         if (requestStatus == WebTokenRequestStatus::Success)
         {

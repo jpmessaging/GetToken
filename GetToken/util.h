@@ -67,7 +67,7 @@ namespace Util::detail
 
 namespace Util
 {
-    inline std::string to_string(std::wstring_view str) noexcept
+    inline std::string to_string(std::wstring_view str)
     {
         if (str.empty())
         {
@@ -81,7 +81,7 @@ namespace Util
         return utf8;
     }
 
-    inline std::wstring to_wstring(std::string_view str) noexcept
+    inline std::wstring to_wstring(std::string_view str)
     {
         if (str.empty())
         {
@@ -100,7 +100,7 @@ namespace Util
         return detail::WebAccountStateMap.at(accountState);
     }
 
-    inline const std::wstring to_wstring(WebAccountState accountState) noexcept
+    inline const std::wstring to_wstring(WebAccountState accountState)
     {
         return to_wstring(detail::WebAccountStateMap.at(accountState));
     }
@@ -110,7 +110,7 @@ namespace Util
         return detail::FindAllWebAccountsStatusMap.at(status);
     }
 
-    inline const std::wstring to_wstring(FindAllWebAccountsStatus status) noexcept
+    inline const std::wstring to_wstring(FindAllWebAccountsStatus status)
     {
         return to_wstring(detail::FindAllWebAccountsStatusMap.at(status));
     }
@@ -120,7 +120,7 @@ namespace Util
         return detail::WebTokenRequestStatusMap.at(status);
     }
 
-    inline const std::wstring to_wstring(WebTokenRequestStatus status) noexcept
+    inline const std::wstring to_wstring(WebTokenRequestStatus status)
     {
         return to_wstring(detail::WebTokenRequestStatusMap.at(status));
     }

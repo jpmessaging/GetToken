@@ -55,12 +55,12 @@ public:
         return m_version->value();
     }
 
-    auto SignOut() const
+    auto SignOut() const noexcept
     {
         return m_signOut->value();
     }
 
-    auto EnableTrace() const
+    auto EnableTrace() const noexcept
     {
         // Trace is enabled by default, unless --notrace is specified
         return not m_notrace->value();
@@ -103,7 +103,7 @@ public:
 
             for (int i = 0; i < m_properties->count(); ++i)
             {
-                const auto& propValue = m_properties->value(i);
+                const auto propValue = m_properties->value(i);
                 auto pos = propValue.find('=');
 
                 if (pos != std::string::npos)
@@ -120,7 +120,7 @@ public:
         return value;
     }
 
-    const std::optional<std::wstring>& TracePath() const noexcept
+    const std::optional<std::wstring>& TracePath() const
     {
         static auto value = [this]() {
             auto path = std::optional<std::wstring>{};
@@ -153,7 +153,7 @@ public:
         return ver;
     }
 
-    std::string GetHelp() const noexcept
+    std::string GetHelp() const
     {
         static const auto exeName = []() {
             const auto exePath = Util::GetModulePath(nullptr);
