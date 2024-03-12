@@ -174,6 +174,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
 
     if (option.ShowAccounts())
     {
+        Trace::Write("Exiting because of ShowAccounts option");
         co_return 0;
     }
 
@@ -434,7 +435,7 @@ std::expected<Option, std::string> ParseOption(int argc, char** argv) noexcept
 
     if (option->UnknownOptions().size())
     {
-        auto error = std::string{ "Unknown options are found:" };
+        auto error = std::string{ "Unknown options are found:\n" };
 
         for (const auto& opt : option->UnknownOptions())
         {
