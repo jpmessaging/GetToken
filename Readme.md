@@ -1,6 +1,6 @@
-This is a sample program to get an access token via Windows's Web Account Manager (WAM) service.
+This is a sample program to get an access token via Windows' Web Account Manager (WAM) service.
 
-The main purpose of this program is to detect & isolate issues at WAM level instead of other programs such as Microsoft Office clients.  
+The main purpose of this program is to detect & isolate issues at WAM level instead of other programs that depend on WAM such as Microsoft Office clients.  
 
 ## Download
 You can download the latest build from [here](https://github.com/jpmessaging/GetToken/releases/download/v0.3.5/GetToken.zip)
