@@ -62,6 +62,12 @@ namespace Util::detail
         MAPENTRY(WebTokenRequestStatus::UserInteractionRequired),
     };
 
+    inline extern const auto WebTokenRequestPromptTypeMap = std::unordered_map<WebTokenRequestPromptType, std::string>
+    {
+        MAPENTRY(WebTokenRequestPromptType::Default),
+        MAPENTRY(WebTokenRequestPromptType::ForceAuthentication)
+    };
+
 #undef MAPENTRY
 }
 
@@ -123,6 +129,16 @@ namespace Util
     inline const std::wstring to_wstring(WebTokenRequestStatus status)
     {
         return to_wstring(detail::WebTokenRequestStatusMap.at(status));
+    }
+
+    inline const std::string& to_string(WebTokenRequestPromptType prompt)
+    {
+        return detail::WebTokenRequestPromptTypeMap.at(prompt);
+    }
+
+    inline const std::wstring to_wstring(WebTokenRequestPromptType prompt)
+    {
+        return to_wstring(detail::WebTokenRequestPromptTypeMap.at(prompt));
     }
 
     /// <summary>

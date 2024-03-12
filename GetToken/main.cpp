@@ -238,15 +238,27 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
 WebTokenRequest GetWebTokenRequest(const WebAccountProvider& provider, const WebTokenRequestPromptType promptType, const Option& option)
 {
     // If scopes & client IDs are provided, use them.
-    const auto& scopes = option.Scopes().value_or(WAM::Scopes::DEFAULT_SCOPES);
-    const auto& clientId = option.ClientId().value_or(WAM::ClientId::MSOFFICE);
-
-    auto request = WebTokenRequest{ provider, scopes, clientId,promptType };
+    const auto clientId = option.ClientId().value_or(WAM::ClientId::MSOFFICE);
+    const auto scopes = option.Scopes().value_or(WAM::Scopes::DEFAULT_SCOPES);
+    
+    auto request = WebTokenRequest{ provider, scopes, clientId, promptType };
 
     // Add request properties
     for (const auto& [key, value] : option.Properties())
     {
         request.Properties().Insert(key, value);
+    }
+
+    // Log request properties
+    Trace::Write("WebTokenRequest:");
+    Trace::Write(L"  clientId: {}", request.ClientId());
+    Trace::Write(L"  Scope: '{}'", request.Scope());
+    Trace::Write("  PromptType: {}", Util::to_string(request.PromptType()));
+    Trace::Write(L"  CorrelationId: {}", request.CorrelationId());
+
+    for (auto&& [key, val] : request.Properties())
+    {
+        Trace::Write(L"  Property: {}={}", key, val);
     }
 
     return request;
