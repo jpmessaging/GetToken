@@ -19,13 +19,13 @@ public:
         m_helpAlias{ m_parser.add<popl::Switch>("?", "", "Show this help message") },
         m_version{ m_parser.add<popl::Switch>("v", "version", "Show version")},
         m_signOut{ m_parser.add<popl::Switch>("", "signout", "Sign out of Web Accounts") },
+        m_showAccounts { m_parser.add<popl::Switch>("", "showaccounts", "Show Web Accounts and exit") },
+        m_notrace { m_parser.add<popl::Switch>("", "notrace", "Disable trace" )},
+        m_wait{ m_parser.add<popl::Switch>("w", "wait", "Wait execution until user enters") },
         m_clientId{ m_parser.add<popl::Value<std::string>>("c", "clientid", std::format("Client ID. Default: {}", Util::to_string(WAM::ClientId::MSOFFICE))) },
         m_scopes{ m_parser.add<popl::Value<std::string>>("", "scopes", std::format(R"(Requested scopes of the token. Default: "{}")", Util::to_string(WAM::Scopes::DEFAULT_SCOPES))) },
         m_properties{ m_parser.add<popl::Value<std::string>>("p", "property", "Request property (e.g., longin_hint=user01@example.com, prompt=login)") },
-        m_tracePath{ m_parser.add<popl::Value<std::string>>("t", "tracepath", "Folder path for a trace file") },
-        m_wait{ m_parser.add<popl::Switch>("w", "wait", "Wait execution until user enters") },
-        m_notrace { m_parser.add<popl::Switch>("", "notrace", "Disable trace" )}
-
+        m_tracePath{ m_parser.add<popl::Value<std::string>>("t", "tracepath", "Folder path for a trace file") }
     { /* empty */ }
 
     Option(int argc, char** argv) : Option()
@@ -58,6 +58,11 @@ public:
     auto SignOut() const noexcept
     {
         return m_signOut->value();
+    }
+
+    auto ShowAccounts() const noexcept
+    {
+        return m_showAccounts->value();
     }
 
     auto EnableTrace() const noexcept
@@ -190,10 +195,11 @@ private:
     std::shared_ptr<const popl::Switch> m_helpAlias;
     std::shared_ptr<const popl::Switch> m_version;
     std::shared_ptr<const popl::Switch> m_signOut;
+    std::shared_ptr<const popl::Switch> m_showAccounts;
     std::shared_ptr<const popl::Switch> m_notrace;
+    std::shared_ptr<const popl::Switch> m_wait;
     std::shared_ptr<const popl::Value<std::string>> m_clientId;
     std::shared_ptr<const popl::Value<std::string>> m_scopes;
     std::shared_ptr<const popl::Value<std::string>> m_properties;
     std::shared_ptr<const popl::Value<std::string>> m_tracePath;
-    std::shared_ptr<const popl::Switch> m_wait;
 };

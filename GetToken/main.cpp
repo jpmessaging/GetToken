@@ -53,6 +53,7 @@ int main(int argc, char** argv)
 
     Console::Init();
     Console::EnableVirtualTerminal();
+    auto ConsoleDtor = Util::DtorAction{ []() { Console::Uninit(); } };
 
     auto option = ParseOption(argc, argv);
 
@@ -169,6 +170,11 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     {
         Logger::WriteLine(ConsoleFormat::Error, "FindAllAccountsAsync failed with {}", Util::to_string(accountsStatus));
         PrintProviderError(findResults.ProviderError());
+    }
+
+    if (option.ShowAccounts())
+    {
+        co_return 0;
     }
 
     /*

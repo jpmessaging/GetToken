@@ -13,13 +13,10 @@
 
 namespace Console
 {
-    inline auto Init()
-    {
-        ::SetConsoleOutputCP(CP_UTF8);
-    }
-
     namespace detail
     {
+        inline auto savedCP = UINT{};
+
         // State of Virtual Terminal
         inline auto vtEnabled = false;
 
@@ -41,6 +38,20 @@ namespace Console
             }
 
             return false;
+        }
+    }
+
+    inline auto Init()
+    {
+        detail::savedCP = ::GetConsoleOutputCP();
+        ::SetConsoleOutputCP(CP_UTF8);
+    }
+
+    inline auto Uninit()
+    {
+        if (detail::savedCP != 0)
+        {
+            ::SetConsoleOutputCP(detail::savedCP);
         }
     }
 
