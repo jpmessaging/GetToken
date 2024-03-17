@@ -58,7 +58,7 @@ namespace Console
     /// <summary>
     /// Enable Virtual Terminal
     /// </summary>
-    /// <returns>bool true if successful</returns>
+    /// <returns>true if successful</returns>
     inline bool EnableVirtualTerminal()
     {
         return detail::SetVirtualTerminal(true);
@@ -67,7 +67,7 @@ namespace Console
     /// <summary>
     /// Disable Virtual Terminal
     /// </summary>
-    /// <returns>bool true if successful</returns>
+    /// <returns>true if successful</returns>
     inline bool DisableVirtualTerminal()
     {
         return detail::SetVirtualTerminal(false);
@@ -122,7 +122,7 @@ namespace Console
     }
 
     /// <summary>
-    /// Returns all attributes to the default state prior to modification
+    /// Reset all attributes to the default state prior to modification
     /// </summary>
     inline void ResetFormat()
     {
@@ -152,6 +152,7 @@ namespace Console
 
                 // Replace the last ";" with "m"
                 formatString.back() = 'm';
+
                 std::print("{}{}", formatString, text);
                 ResetFormat();
             }
