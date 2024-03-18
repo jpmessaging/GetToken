@@ -10,7 +10,38 @@ While you can run this program without any options, this program supports input 
 
 For example:
 
-    GetToken.exe -?
+    C:\>GetToken.exe -?
+    GetToken (version 0.3.6)
+    Available options:
+      -h, --help           Show this help message
+      -?                   Show this help message
+      -v, --version        Show version
+      -c, --clientid arg   Client ID. Default: d3590ed6-52b3-4102-aeff-aad2292ab01c
+      --scopes arg         Scopes of the token. Default: "https://outlook.office365.com//.default offline_access openid profile"
+      -p, --property arg   Request property (e.g., longin_hint=user01@example.com, prompt=login). Can be used multiple times
+      --showaccounts       Show Web Accounts and exit
+      --signout            Sign out of Web Accounts
+      -t, --tracepath arg  Folder path for a trace file
+      -n, --notrace        Disable trace
+      -w, --wait           Wait execution until user enters
+    
+    Note: All options are case insensitive.
+    
+    Example 1: GetToken
+    Run with default configurations
+    
+    Example 2: GetToken --property login_hint=user01@example.com --property prompt=login --property resource=https://graph.windows.net
+    Add the given properties to the request
+    
+    Example 3: GetToken -p login_hint=user01@example.com -p prompt=login -p resource=https://graph.windows.net
+    Same as Example 2, using the short option name -p
+    
+    Example 4: GetToken --scopes "open_id profiles"
+    Use the given scopes for the token
+    
+    Example 5: GetToken --signout
+    Sign out from all web accounts before making token requests
+
 
 ## License
 Copyright (c) 2024 Ryusuke Fujita
