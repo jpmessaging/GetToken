@@ -60,7 +60,7 @@ int main(int argc, char** argv)
     if (not option)
     {
         Console::WriteLine(ConsoleFormat::Error, "{}", option.error());
-        return 1;
+        return EXIT_FAILURE;
     }
 
     Console::WriteLine(ConsoleFormat::Verbose, "{}", option->GetVersion());
@@ -68,12 +68,12 @@ int main(int argc, char** argv)
     if (option->Help())
     {
         Console::WriteLine("{}", option->GetHelp());
-        return 0;
+        return EXIT_SUCCESS;
     }
 
     if (option->Version())
     {
-        return 0;
+        return EXIT_SUCCESS;
     }
 
     if (option->EnableTrace())
@@ -124,7 +124,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     if (not provider)
     {
         Logger::WriteLine(ConsoleFormat::Error, LR"(FindAccountProviderAsync failed to find Provider "{}")", WAM::ProviderId::MICROSOFT);
-        co_return 1;
+        co_return EXIT_FAILURE;
     }
 
     Logger::WriteLine("Provider:");
@@ -175,7 +175,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     if (option.ShowAccounts())
     {
         Trace::Write("Exiting because of ShowAccounts option");
-        co_return 0;
+        co_return EXIT_SUCCESS;
     }
 
     /*
@@ -415,38 +415,36 @@ void EnableTrace(const Option& option) noexcept
 }
 
 /// <summary>
-/// Parse input options. On failure, it returns a error message.
+/// Parse input options. On failure, it returns an error message.
 /// </summary>
 /// <param name="argc">arg count</param>
 /// <param name="argv">array of arg strings</param>
 /// <returns></returns>
 std::expected<Option, std::string> ParseOption(int argc, char** argv) noexcept
 {
-    auto option = std::optional<Option>{};
-
     try
     {
-        option.emplace(argc, argv);
+        auto option = Option{ argc, argv };
+
+        if (option.UnknownOptions().size())
+        {
+            auto error = std::string{ "Unknown options are found:\n" };
+
+            for (const auto& opt : option.UnknownOptions())
+            {
+                error.append(opt).append("\n");
+            }
+
+            error.append("\nPlease check the avaialble options with --help (-h or -?)");
+            return std::unexpected{ error };
+        }
+
+        return option;
     }
     catch (...)
     {
         return std::unexpected{ "Failed to parse the input options. Please check the avaialble options with -h or -? switch" };
     }
-
-    if (option->UnknownOptions().size())
-    {
-        auto error = std::string{ "Unknown options are found:\n" };
-
-        for (const auto& opt : option->UnknownOptions())
-        {
-            error.append(opt).append("\n");
-        }
-
-        error.append("\nPlease check the avaialble options with --help (-h or -?)");
-        return std::unexpected{ error };
-    }
-
-    return std::move(*option);
 }
 
 namespace Logger

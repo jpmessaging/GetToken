@@ -33,7 +33,7 @@ public:
         m_parser.parse(argc, argv);
     }
 
-    // detor, copy, and move are compiler-generated default.
+    // dtor, copy, and move are compiler-generated default.
 
     void Parse(int argc, char** argv)
     {

@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <expected>
 #include <filesystem>
 #include <format>
@@ -30,5 +31,6 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <utility>
 
 #include "popl.hpp"
