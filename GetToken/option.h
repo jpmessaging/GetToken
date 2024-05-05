@@ -6,6 +6,8 @@
 #include <string>
 #include <unordered_map>
 
+#include <winrt/base.h>
+
 #include "popl.hpp"
 #include "util.h"
 #include "wam.h"
@@ -71,12 +73,12 @@ public:
         return not m_notrace->value();
     }
 
-    const std::optional<std::wstring>& ClientId() const noexcept
+    const std::optional<winrt::hstring>& ClientId() const noexcept
     {
-        static auto value = [this]() -> std::optional<std::wstring> {
+        static auto value = [this]() -> std::optional<winrt::hstring> {
             if (m_clientId->is_set())
             {
-                return Util::to_wstring(m_clientId->value());
+                return winrt::to_hstring(m_clientId->value());
             }
 
             return std::nullopt;
@@ -85,12 +87,12 @@ public:
         return value;
     }
 
-    const std::optional<std::wstring>& Scopes() const noexcept
+    const std::optional<winrt::hstring>& Scopes() const noexcept
     {
-        static auto value = [this]() -> std::optional<std::wstring> {
+        static auto value = [this]() -> std::optional<winrt::hstring> {
             if (m_scopes->is_set())
             {
-                return Util::to_wstring(m_scopes->value());
+                return winrt::to_hstring(m_scopes->value());
             }
 
             return std::nullopt;
@@ -99,12 +101,12 @@ public:
         return value;
     }
 
-    const std::unordered_map<std::wstring, std::wstring>& Properties() const
+    const std::unordered_map<winrt::hstring, winrt::hstring>& Properties() const
     {
         // Parse properties and put them in a map
         // Property value should look like "key=value"
-        static auto value = [this]() -> std::unordered_map<std::wstring, std::wstring> {
-            auto map = std::unordered_map<std::wstring, std::wstring>{ m_properties->count() };
+        static auto value = [this]() {
+            auto map = std::unordered_map<winrt::hstring, winrt::hstring>{ m_properties->count() };
 
             for (int i = 0; i < m_properties->count(); ++i)
             {
@@ -115,7 +117,7 @@ public:
                 {
                     auto key = propValue.substr(0, pos);
                     auto val = propValue.substr(pos + 1);
-                    map.emplace(Util::to_wstring(key), Util::to_wstring(val));
+                    map.emplace(winrt::to_hstring(key), winrt::to_hstring(val));
                 }
             }
 
@@ -125,14 +127,14 @@ public:
         return value;
     }
 
-    const std::optional<std::wstring>& TracePath() const
+    const std::optional<std::filesystem::path>& TracePath() const
     {
         static auto value = [this]() {
-            auto path = std::optional<std::wstring>{};
+            auto path = std::optional<std::filesystem::path>{};
 
             if (m_tracePath->is_set())
             {
-                path = Util::to_wstring(m_tracePath->value());
+                path = m_tracePath->value();
             }
 
             return path;
@@ -151,8 +153,8 @@ public:
         static auto ver = []() {
             const auto exePath = Util::GetModulePath(nullptr);
             const auto exeName = exePath.stem();
-            auto version = Util::GetFileVersion(exePath.c_str());
-            return std::format("{} (version {})", Util::to_string(exeName.c_str()), Util::to_string(version.value_or(L"")));
+            auto version = Util::GetFileVersion(exePath);
+            return std::format("{} (version {})", exeName.string(), version.value_or(""));
         }();
 
         return ver;
@@ -162,7 +164,7 @@ public:
     {
         static const auto exeName = []() {
             const auto exePath = Util::GetModulePath(nullptr);
-            return Util::to_string(exePath.stem().c_str());
+            return exePath.filename().string();
         }();
 
         auto help = m_parser.help();

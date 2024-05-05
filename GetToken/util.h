@@ -71,6 +71,31 @@ namespace Util::detail
 #undef MAPENTRY
 }
 
+namespace winrt::Windows::Security::Authentication::Web::Core
+{
+    // Add to_string() functions in the same namespace as the target object so that ADL works.
+
+    inline const std::string& to_string(WebAccountState accountState) noexcept
+    {
+        return Util::detail::WebAccountStateMap.at(accountState);
+    }
+
+    inline const std::string& to_string(FindAllWebAccountsStatus status) noexcept
+    {
+        return Util::detail::FindAllWebAccountsStatusMap.at(status);
+    }
+
+    inline const std::string& to_string(WebTokenRequestStatus status) noexcept
+    {
+        return Util::detail::WebTokenRequestStatusMap.at(status);
+    }
+
+    inline const std::string& to_string(WebTokenRequestPromptType prompt)
+    {
+        return Util::detail::WebTokenRequestPromptTypeMap.at(prompt);
+    }
+}
+
 namespace Util
 {
     inline std::string to_string(std::wstring_view str)
@@ -101,46 +126,6 @@ namespace Util
         return wstr;
     }
 
-    inline const std::string& to_string(WebAccountState accountState) noexcept
-    {
-        return detail::WebAccountStateMap.at(accountState);
-    }
-
-    inline const std::wstring to_wstring(WebAccountState accountState)
-    {
-        return to_wstring(detail::WebAccountStateMap.at(accountState));
-    }
-
-    inline const std::string& to_string(FindAllWebAccountsStatus status) noexcept
-    {
-        return detail::FindAllWebAccountsStatusMap.at(status);
-    }
-
-    inline const std::wstring to_wstring(FindAllWebAccountsStatus status)
-    {
-        return to_wstring(detail::FindAllWebAccountsStatusMap.at(status));
-    }
-
-    inline const std::string& to_string(WebTokenRequestStatus status) noexcept
-    {
-        return detail::WebTokenRequestStatusMap.at(status);
-    }
-
-    inline const std::wstring to_wstring(WebTokenRequestStatus status)
-    {
-        return to_wstring(detail::WebTokenRequestStatusMap.at(status));
-    }
-
-    inline const std::string& to_string(WebTokenRequestPromptType prompt)
-    {
-        return detail::WebTokenRequestPromptTypeMap.at(prompt);
-    }
-
-    inline const std::wstring to_wstring(WebTokenRequestPromptType prompt)
-    {
-        return to_wstring(detail::WebTokenRequestPromptTypeMap.at(prompt));
-    }
-
     /// <summary>
     /// Get path to the given module
     /// </summary>
@@ -160,21 +145,20 @@ namespace Util
     /// </summary>
     /// <param name="filePath">Path to the file</param>
     /// <returns>version string as std::optional</returns>
-    inline std::optional<std::wstring> GetFileVersion(const wchar_t* filePath) noexcept
+    inline std::expected<std::string, std::string> GetFileVersion(const std::filesystem::path& filePath) noexcept
     {
-        const auto size = ::GetFileVersionInfoSize(filePath, nullptr);
+        const auto size = ::GetFileVersionInfoSize(filePath.c_str(), nullptr);
 
-        if (size == 0) {
-            ::OutputDebugStringW(std::format(L"GetFileVersionInfoSize failed with {}\n", GetLastError()).c_str());
-            return {};
+        if (size == 0)
+        {
+            return std::unexpected{ std::format("GetFileVersionInfoSize failed with {}", GetLastError()) };
         }
 
         const auto pData = std::make_unique<BYTE[]>(size);
 
-        if (!::GetFileVersionInfoW(filePath, 0, size, pData.get()))
+        if (!::GetFileVersionInfoW(filePath.c_str(), 0, size, pData.get()))
         {
-            ::OutputDebugStringW(std::format(L"GetFileVersionInfoW failed with {}\n", GetLastError()).c_str());
-            return {};
+            return std::unexpected { std::format("GetFileVersionInfoW failed with {}\n", GetLastError()) };
         }
 
         VS_FIXEDFILEINFO* pFileInfo{};
@@ -182,18 +166,17 @@ namespace Util
 
         if (!::VerQueryValue(pData.get(), L"\\", (LPVOID*)&pFileInfo, &fileInfoSize))
         {
-            ::OutputDebugStringW(std::format(L"VerQueryValue failed with {}\n", GetLastError()).c_str());
-            return {};
+            return std::unexpected{ std::format("VerQueryValue failed with {}", GetLastError()) };
         }
 
         const auto major = (pFileInfo->dwFileVersionMS >> 16) & 0xffff;
         const auto minor = pFileInfo->dwFileVersionMS & 0xffff;
         const auto revision = (pFileInfo->dwFileVersionLS >> 16) & 0xffff;
 
-        return std::format(L"{}.{}.{}", major, minor, revision);
+        return std::format("{}.{}.{}", major, minor, revision);
     }
 
-    inline std::expected<std::wstring, std::wstring> GetCurrentUserName()
+    inline std::expected<std::string, std::string> GetCurrentUserName()
     {
         auto name = std::wstring{};
         auto cch = DWORD{};
@@ -211,10 +194,10 @@ namespace Util
         {
             // This cch does NOT include terminating null
             name.resize(cch);
-            return name;
+            return to_string(name);
         }
 
-        return std::unexpected<std::wstring>{ std::format(L"GetUserNameExW failed with {:#x}", static_cast<std::uint32_t>(ec)) };
+        return std::unexpected{ std::format("GetUserNameExW failed with {:#x}", static_cast<std::uint32_t>(ec)) };
     }
 
     template <std::invocable F>

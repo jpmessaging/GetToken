@@ -85,7 +85,7 @@ int main(int argc, char** argv)
     Trace::Write("CommandLine: {}", GetCommandLineA());
 
     auto currentUser = Util::GetCurrentUserName();
-    Trace::Write(L"Current User: {}", currentUser.has_value() ? currentUser.value() : currentUser.error());
+    Trace::Write("Current User: {}", currentUser.has_value() ? currentUser.value() : currentUser.error());
 
     if (option->Wait())
     {
@@ -168,7 +168,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     }
     else
     {
-        Logger::WriteLine(ConsoleFormat::Error, "FindAllAccountsAsync failed with {}", Util::to_string(accountsStatus));
+        Logger::WriteLine(ConsoleFormat::Error, "FindAllAccountsAsync failed with {}", to_string(accountsStatus));
         PrintProviderError(findResults.ProviderError());
     }
 
@@ -190,7 +190,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         const auto& requestResult = co_await WebAuthenticationCoreManager::GetTokenSilentlyAsync(request);
         const auto requestStatus = requestResult.ResponseStatus();
 
-        Logger::WriteLine("GetTokenSilentlyAsync's ResponseStatus: {}", Util::to_string(requestStatus));
+        Logger::WriteLine("GetTokenSilentlyAsync's ResponseStatus: {}", to_string(requestStatus));
 
         if (requestStatus == WebTokenRequestStatus::Success)
         {
@@ -219,7 +219,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         const auto& requestResult = co_await InvokeRequestTokenAsync(request, hwnd);
         auto requestStatus = requestResult.ResponseStatus();
 
-        Logger::WriteLine("RequestTokenAsync's ResponseStatus: {}", Util::to_string(requestStatus));
+        Logger::WriteLine("RequestTokenAsync's ResponseStatus: {}", to_string(requestStatus));
 
         if (requestStatus == WebTokenRequestStatus::Success)
         {
@@ -260,7 +260,7 @@ WebTokenRequest GetWebTokenRequest(const WebAccountProvider& provider, const Web
     Trace::Write("WebTokenRequest:");
     Trace::Write(L"  clientId: {}", request.ClientId());
     Trace::Write(L"  Scope: '{}'", request.Scope());
-    Trace::Write("  PromptType: {}", Util::to_string(request.PromptType()));
+    Trace::Write("  PromptType: {}", to_string(request.PromptType()));
     Trace::Write(L"  CorrelationId: {}", request.CorrelationId());
 
     for (auto&& [key, val] : request.Properties())
@@ -374,7 +374,7 @@ HWND CreateAnchorWindow()
 void PrintWebAccount(const WebAccount& account) noexcept
 {
     Logger::WriteLine(L"  ID: {}", account.Id());
-    Logger::WriteLine("  State: {}", Util::to_string(account.State()));
+    Logger::WriteLine("  State: {}", to_string(account.State()));
     Logger::WriteLine("  Properties:");
 
     for (const auto& [key, value] : account.Properties())
@@ -386,7 +386,7 @@ void PrintWebAccount(const WebAccount& account) noexcept
 void EnableTrace(const Option& option) noexcept
 {
     auto exePath = Util::GetModulePath(nullptr);
-    auto path = option.TracePath().has_value() ? std::filesystem::path{ option.TracePath().value() } : exePath.parent_path();
+    auto path = option.TracePath().has_value() ? option.TracePath().value() : exePath.parent_path();
 
     try
     {
@@ -406,7 +406,7 @@ void EnableTrace(const Option& option) noexcept
 
         path /= fileName;
 
-        Trace::Enable(path.wstring());
+        Trace::Enable(path);
     }
     catch (const std::exception& e)
     {

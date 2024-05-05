@@ -5,7 +5,7 @@
 #include <chrono>
 #include <filesystem>
 #include <future>
-#include <optional>
+#include <semaphore>
 #include <string>
 
 #ifndef WIN32_LEAN_AND_MEAN
@@ -21,172 +21,159 @@
 
 #include "util.h"
 
-namespace Diagnostics::detail
+namespace Diagnostics::Trace::detail
 {
-    struct TraceData
-    {
-        DWORD ThreadId = 0;
-        std::chrono::system_clock::time_point Time;
-        std::string Message;
-
-        explicit TraceData(const std::string_view message)
-            : ThreadId{ GetCurrentThreadId() }, Time{ std::chrono::system_clock::now() }, Message{ message }
-        {}
-    };
-
-    class CsvTracer
-    {
-    public:
-        explicit CsvTracer(const std::filesystem::path& filePath);
-        ~CsvTracer();
-        auto Write(std::string_view message) -> void;
-
-    private:
-        auto WriteAllMessages() -> void;
-        Concurrency::unbounded_buffer<std::shared_ptr<TraceData>> _buffer;
-        std::future<void> _writeTask;
-        Concurrency::cancellation_token_source _cts;
-        std::unique_ptr<void, decltype(&CloseHandle)> _hFile;
-        std::unique_ptr<void, decltype(&CloseHandle)> _hBuffReady;
-    };
-
-#pragma region CsvTracer member definitions
-    inline CsvTracer::CsvTracer(const std::filesystem::path& filePath) :
-        _hFile{ nullptr, CloseHandle },
-        _hBuffReady{ CreateEventW(nullptr, false, false, nullptr), CloseHandle }
-    {
-        _hFile.reset(::CreateFileW(filePath.c_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr));
-
-        if (INVALID_HANDLE_VALUE == _hFile.get())
+        class ITracer
         {
-            throw std::system_error{ static_cast<int>(GetLastError()), std::system_category(), std::format("Failed to open {}", Util::to_string(filePath.c_str())) };
+        public:
+            virtual ~ITracer() = default;
+            virtual void Write(std::string_view) = 0;
+        };
+
+        struct TraceData
+        {
+            DWORD ThreadId = 0;
+            std::chrono::system_clock::time_point Time;
+            std::string Message;
+
+            explicit TraceData(const std::string_view message)
+                : ThreadId{ GetCurrentThreadId() }, Time{ std::chrono::system_clock::now() }, Message{ message }
+            {}
+        };
+
+        class CsvTracer final : public ITracer
+        {
+        public:
+            explicit CsvTracer(const std::filesystem::path& filePath);
+            ~CsvTracer();
+            void Write(std::string_view msg) override;
+
+        private:
+            void WriteAllMessages();
+            auto Stream() noexcept -> std::ostream&;
+
+            Concurrency::unbounded_buffer<std::shared_ptr<TraceData>> _buffer;
+            std::future<void> _writeTask;
+            Concurrency::cancellation_token_source _cts;
+            std::ofstream _ofstream;
+            std::binary_semaphore _buffSemaphore{ 0 };
+        };
+
+        inline CsvTracer::CsvTracer(const std::filesystem::path& filePath) :
+            _ofstream{ filePath }
+        {
+            if (not _ofstream.good())
+            {
+                throw std::runtime_error{ std::format("Failed to open {}", Util::to_string(filePath.c_str())) };
+            }
+
+            // Start a consumer
+            _writeTask = std::async(
+                std::launch::async,
+                [this, cancelToken = _cts.get_token()]() {
+                    while (true) {
+                        _buffSemaphore.acquire();
+                        WriteAllMessages();
+
+                        if (cancelToken.is_canceled())
+                        {
+                            return;
+                        }
+                    }
+                });
+
+            // Write the header
+            std::println(Stream(), "date-time,thread-id,message");
         }
 
-        // Start a consumer
-        _writeTask = std::async(
-            std::launch::async,
-            [this, cancelToken = _cts.get_token()]() {
-                while (true) {
-                    WaitForSingleObject(_hBuffReady.get(), INFINITE);
-                    WriteAllMessages();
-                    if (cancelToken.is_canceled())
-                    {
-                        return;
-                    }
-                }
-            });
-
-        // Write the header;
-        auto header = Util::to_string(L"date-time,thread-id,message\n");
-        auto writtenCount = DWORD{};
-        ::WriteFile(_hFile.get(), header.data(), static_cast<DWORD>(header.size()), &writtenCount, nullptr);
-    }
-
-    inline CsvTracer::~CsvTracer()
-    {
-        try {
+        inline CsvTracer::~CsvTracer()
+        {
             // Stop consumer
             _cts.cancel();
-            SetEvent(_hBuffReady.get());
+            _buffSemaphore.release();
 
-            // Write the rest of the messages in the buffer
+            // Wait for the consumer to exit
+            _writeTask.wait();
+
+            // Write the rest of the messages in the buffer if any
             WriteAllMessages();
         }
-        catch (...)
+
+        inline void CsvTracer::Write(std::string_view message)
         {
-            // Ignore exception to comply with (implicit) noexcept specifier
+            Concurrency::send(_buffer, std::make_shared<TraceData>(message));
+            _buffSemaphore.release();
         }
-    }
 
-    inline auto CsvTracer::Write(std::string_view message) -> void
-    {
-        Concurrency::send(_buffer, std::make_shared<TraceData>(message));
-        SetEvent(_hBuffReady.get());
-    }
-
-    inline auto CsvTracer::WriteAllMessages() -> void
-    {
-        auto data = std::shared_ptr<TraceData>{};
-        auto writtenCount = DWORD{};
-
-        while (Concurrency::try_receive(_buffer, data))
+        inline void CsvTracer::WriteAllMessages()
         {
-            auto& message = data->Message;
+            auto data = std::shared_ptr<TraceData>{};
 
-            // Replace double-quotation (") with a sigle-quotation (')
-            for (auto& c : message)
+            while (Concurrency::try_receive(_buffer, data))
             {
-                if (c == '"')
-                    c = '\'';
+                // Replace all occurrences of double-quotation (") with a sigle-quotation (')
+                // Not using std::execution::par here because it's actually faster with sequential processing.
+                std::replace(begin(data->Message), end(data->Message), '"', '\'');
+
+                // Create a view without the last newline char if any
+                auto view = std::string_view{ data->Message };
+
+                if (view.ends_with('\n'))
+                {
+                    view.remove_suffix(1);
+                }
+
+                std::println(Stream(), "{0:%F}T{0:%T%z},{1},\"{2}\"", data->Time, data->ThreadId, view);
             }
-
-            auto view = std::string_view{ message };
-
-            if (view.ends_with('\n'))
-            {
-                view.remove_suffix(1);
-            }
-
-            auto formatted = std::format("{0:%F}T{0:%T%z},{1},\"{2}\"\n", data->Time, data->ThreadId, view);
-            ::WriteFile(_hFile.get(), formatted.data(), static_cast<DWORD>(formatted.size()), &writtenCount, nullptr);
         }
-    }
-#pragma endregion CsvTracer member definitions
 
-    inline std::optional<CsvTracer> _tracer = std::nullopt;
-
-    inline auto Write(std::string_view message) -> void
-    {
-        if (_tracer)
+        inline auto CsvTracer::Stream() noexcept -> std::ostream&
         {
-            _tracer->Write(message);
+            return _ofstream;
         }
-    }
 
-    inline auto Write(std::wstring_view message) -> void
-    {
-        if (_tracer)
-        {
-            _tracer->Write(Util::to_string(message));
-        }
-    }
-} // end of namespace Diagnostics::detail
+        // ITracer instance
+        auto _tracer = std::unique_ptr<ITracer>{};
+} // end of namespace Diagnostics::Trace::detail
 
 namespace Diagnostics::Trace
 {
-        inline void Enable(std::wstring_view path)
-        {
-            if (detail::_tracer)
-            {
-                throw std::runtime_error{ std::format("Trace has been already initialized with {}", Util::to_string(path)) };
-            }
+    using detail::_tracer;
+    using detail::CsvTracer;
 
-            detail::_tracer.emplace(path);
+    inline bool IsEnabled() noexcept
+    {
+        return !!detail::_tracer;
+    }
+
+    inline void Enable(std::filesystem::path path)
+    {
+        if (IsEnabled())
+        {
+            throw std::runtime_error{ "Trace has been already initialized" };
         }
 
-        inline void Disable()
-        {
-            if (detail::_tracer)
-            {
-                detail::_tracer.reset();
-            }
-        }
+        _tracer = std::make_unique<CsvTracer>(path);
+    }
 
-        inline bool Enabled()
+    inline void Disable() noexcept
+    {
+        if (IsEnabled())
         {
-            return detail::_tracer.has_value();
+            _tracer.reset();
         }
+    }
 
-        template <class... Args>
-        void Write(const std::format_string<Args...> format, Args&&... args)
-        {
-            Diagnostics::detail::Write(std::format(format, std::forward<Args>(args)...));
-        }
+    template <class... Args>
+    void Write(const std::format_string<Args...> format, Args&&... args)
+    {
+        _tracer->Write(std::format(format, std::forward<Args>(args)...));
+    }
 
-        template <class... Args>
-        void Write(const std::wformat_string<Args...> format, Args&&... args)
-        {
-            Diagnostics::detail::Write(std::format(format, std::forward<Args>(args)...));
-        }
-} // end of namespace Diagnostics::Trace
+    template <class... Args>
+    void Write(const std::wformat_string<Args...> format, Args&&... args)
+    {
+        _tracer->Write(Util::to_string(std::format(format, std::forward<Args>(args)...)));
+    }
+}
 #endif
