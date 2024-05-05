@@ -11,7 +11,7 @@ While you can run this program without any options, this program supports input 
 For example:
 
     C:\>GetToken.exe -?
-    GetToken (version 0.3.6)
+    GetToken (version 0.3.7)
     Available options:
       -h, --help           Show this help message
       -?                   Show this help message
@@ -27,21 +27,20 @@ For example:
     
     Note: All options are case insensitive.
     
-    Example 1: GetToken
+    Example 1: GetToken.exe
     Run with default configurations
     
-    Example 2: GetToken --property login_hint=user01@example.com --property prompt=login --property resource=https://graph.windows.net
+    Example 2: GetToken.exe --property login_hint=user01@example.com --property prompt=login --property resource=https://graph.windows.net
     Add the given properties to the request
     
-    Example 3: GetToken -p login_hint=user01@example.com -p prompt=login -p resource=https://graph.windows.net
+    Example 3: GetToken.exe -p login_hint=user01@example.com -p prompt=login -p resource=https://graph.windows.net
     Same as Example 2, using the short option name -p
     
-    Example 4: GetToken --scopes "open_id profiles"
+    Example 4: GetToken.exe --scopes open_id profiles
     Use the given scopes for the token
     
-    Example 5: GetToken --signout
+    Example 5: GetToken.exe --signout
     Sign out from all web accounts before making token requests
-
 
 ## License
 Copyright (c) 2024 Ryusuke Fujita

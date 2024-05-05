@@ -129,7 +129,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
 
     Logger::WriteLine("Provider:");
     Logger::WriteLine(L"  ID: {}", provider.Id());
-    Logger::WriteLine(LR"(  DisplayName: "{}")", provider.DisplayName());
+    Logger::WriteLine(R"(  DisplayName: "{}")", Util::to_string(provider.DisplayName()));
     Logger::WriteLine("");
 
     /*
@@ -456,8 +456,8 @@ namespace Logger
     void WriteLine(const std::format_string<Args...> format, Args&&... args) noexcept
     {
         auto message = std::format(format, std::forward<Args>(args)...);
-        Console::WriteLine("{}", message);
         Trace::Write("{}", message);
+        Console::WriteLine("{}", message);
     }
 
     template <typename... Args>
