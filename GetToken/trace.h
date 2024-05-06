@@ -5,6 +5,7 @@
 #include <chrono>
 #include <filesystem>
 #include <future>
+#include <ranges>
 #include <semaphore>
 #include <string>
 
@@ -30,17 +31,6 @@ namespace Diagnostics::Trace::detail
         virtual void Write(std::string_view) = 0;
     };
 
-    struct TraceData
-    {
-        DWORD ThreadId = 0;
-        std::chrono::system_clock::time_point Time;
-        std::string Message;
-
-        explicit TraceData(const std::string_view message)
-            : ThreadId{ GetCurrentThreadId() }, Time{ std::chrono::system_clock::now() }, Message{ message }
-        {}
-    };
-
     class CsvTracer final : public ITracer
     {
     public:
@@ -52,11 +42,24 @@ namespace Diagnostics::Trace::detail
         void WriteAllMessages();
         auto Stream() noexcept -> std::ostream&;
 
+        struct TraceData;
+
         Concurrency::unbounded_buffer<std::shared_ptr<TraceData>> _buffer;
         std::future<void> _writeTask;
         Concurrency::cancellation_token_source _cts;
         std::ofstream _ofstream;
         std::binary_semaphore _buffSemaphore{ 0 };
+    };
+
+    struct CsvTracer::TraceData
+    {
+        DWORD ThreadId = 0;
+        std::chrono::system_clock::time_point Time;
+        std::string Message;
+
+        explicit TraceData(const std::string_view message)
+            : ThreadId{ GetCurrentThreadId() }, Time{ std::chrono::system_clock::now() }, Message{ message }
+        {}
     };
 
     inline CsvTracer::CsvTracer(const std::filesystem::path& filePath) :
@@ -112,8 +115,8 @@ namespace Diagnostics::Trace::detail
         while (Concurrency::try_receive(_buffer, data))
         {
             // Replace all occurrences of double-quotation (") with a sigle-quotation (')
-            // Not using std::execution::par here because it's actually faster with sequential processing.
-            std::replace(begin(data->Message), end(data->Message), '"', '\'');
+            // Not using std::execution::par with std::replace() here because it's actually faster with sequential processing.
+            std::ranges::replace(data->Message, '"', '\'');
 
             // Create a view without the last newline char if any
             auto view = std::string_view{ data->Message };
@@ -138,9 +141,6 @@ namespace Diagnostics::Trace::detail
 
 namespace Diagnostics::Trace
 {
-    using detail::_tracer;
-    using detail::CsvTracer;
-
     inline bool IsEnabled() noexcept
     {
         return !!detail::_tracer;
@@ -148,6 +148,9 @@ namespace Diagnostics::Trace
 
     inline void Enable(std::filesystem::path path)
     {
+        using detail::_tracer;
+        using detail::CsvTracer;
+
         if (IsEnabled())
         {
             throw std::runtime_error{ "Trace has been already initialized" };
@@ -158,6 +161,8 @@ namespace Diagnostics::Trace
 
     inline void Disable() noexcept
     {
+        using detail::_tracer;
+
         if (IsEnabled())
         {
             _tracer.reset();
@@ -167,6 +172,8 @@ namespace Diagnostics::Trace
     template <class... Args>
     void Write(const std::format_string<Args...> format, Args&&... args)
     {
+        using detail::_tracer;
+
         if (IsEnabled())
         {
             _tracer->Write(std::format(format, std::forward<Args>(args)...));
@@ -176,6 +183,8 @@ namespace Diagnostics::Trace
     template <class... Args>
     void Write(const std::wformat_string<Args...> format, Args&&... args)
     {
+        using detail::_tracer;
+
         if (IsEnabled())
         {
             _tracer->Write(Util::to_string(std::format(format, std::forward<Args>(args)...)));
