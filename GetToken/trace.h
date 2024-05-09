@@ -136,7 +136,7 @@ namespace Diagnostics::Trace::detail
     }
 
     // ITracer instance
-    auto _tracer = std::unique_ptr<ITracer>{};
+    inline auto _tracer = std::unique_ptr<ITracer>{};
 } // end of namespace Diagnostics::Trace::detail
 
 namespace Diagnostics::Trace

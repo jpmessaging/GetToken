@@ -119,7 +119,7 @@ namespace Util
             return {};
         }
 
-        auto cch = ::MultiByteToWideChar(CP_ACP, 0, &str[0], static_cast<int>(str.size()), nullptr, 0);
+        auto cch = ::MultiByteToWideChar(CP_ACP, 0, str.data(), static_cast<int>(str.size()), nullptr, 0);
         auto wstr = std::wstring(cch, 0);
         ::MultiByteToWideChar(CP_ACP, 0, str.data(), static_cast<int>(str.size()), wstr.data(), cch);
 
@@ -141,7 +141,7 @@ namespace Util
     }
 
     /// <summary>
-    /// Get file version as std::wstring
+    /// Get file version as std::string
     /// </summary>
     /// <param name="filePath">Path to the file</param>
     /// <returns>version string as std::optional</returns>
