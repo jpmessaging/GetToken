@@ -50,8 +50,8 @@ int main(int argc, char** argv)
 {
     std::ios_base::sync_with_stdio(false);
     winrt::init_apartment();
+    auto coUninit = Util::DtorAction{ []() { winrt::uninit_apartment(); } };
 
-    Console::Init();
     Console::EnableVirtualTerminal();
     auto ConsoleDtor = Util::DtorAction{ []() { Console::Uninit(); } };
 
@@ -168,7 +168,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     }
     else
     {
-        Logger::WriteLine(ConsoleFormat::Error, "FindAllAccountsAsync failed with {}", to_string(accountsStatus));
+        Logger::WriteLine(ConsoleFormat::Error, "FindAllAccountsAsync failed with {}", accountsStatus);
         PrintProviderError(findResults.ProviderError());
     }
 
@@ -190,7 +190,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         const auto& requestResult = co_await WebAuthenticationCoreManager::GetTokenSilentlyAsync(request);
         const auto requestStatus = requestResult.ResponseStatus();
 
-        Logger::WriteLine("GetTokenSilentlyAsync's ResponseStatus: {}", to_string(requestStatus));
+        Logger::WriteLine("GetTokenSilentlyAsync's ResponseStatus: {}", requestStatus);
 
         if (requestStatus == WebTokenRequestStatus::Success)
         {
@@ -219,7 +219,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         const auto& requestResult = co_await InvokeRequestTokenAsync(request, hwnd);
         auto requestStatus = requestResult.ResponseStatus();
 
-        Logger::WriteLine("RequestTokenAsync's ResponseStatus: {}", to_string(requestStatus));
+        Logger::WriteLine("RequestTokenAsync's ResponseStatus: {}", requestStatus);
 
         if (requestStatus == WebTokenRequestStatus::Success)
         {
@@ -260,7 +260,7 @@ WebTokenRequest GetWebTokenRequest(const WebAccountProvider& provider, const Web
     Trace::Write("WebTokenRequest:");
     Trace::Write(L"  clientId: {}", request.ClientId());
     Trace::Write(L"  Scope: '{}'", request.Scope());
-    Trace::Write("  PromptType: {}", to_string(request.PromptType()));
+    Trace::Write("  PromptType: {}", request.PromptType());
     Trace::Write(L"  CorrelationId: {}", request.CorrelationId());
 
     for (auto&& [key, val] : request.Properties())
@@ -374,7 +374,7 @@ HWND CreateAnchorWindow()
 void PrintWebAccount(const WebAccount& account) noexcept
 {
     Logger::WriteLine(L"  ID: {}", account.Id());
-    Logger::WriteLine("  State: {}", to_string(account.State()));
+    Logger::WriteLine("  State: {}", account.State());
     Logger::WriteLine("  Properties:");
 
     for (const auto& [key, value] : account.Properties())

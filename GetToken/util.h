@@ -4,6 +4,7 @@
 #pragma once
 
 #include <expected>
+#include <format>
 #include <filesystem>
 #include <string>
 
@@ -95,6 +96,43 @@ namespace winrt::Windows::Security::Authentication::Web::Core
         return Util::detail::WebTokenRequestPromptTypeMap.at(prompt);
     }
 }
+
+// Custom formatters for WAM types
+template<>
+struct std::formatter<WebAccountState> : std::formatter<std::string_view>
+{
+    auto format(const WebAccountState& val, std::format_context& ctx) const
+    {
+        return std::formatter<std::string_view>::format(Util::detail::WebAccountStateMap.at(val), ctx);
+    }
+};
+
+template<>
+struct std::formatter<FindAllWebAccountsStatus> : std::formatter<std::string_view>
+{
+    auto format(const FindAllWebAccountsStatus& val, std::format_context& ctx) const
+    {
+        return std::formatter<std::string_view>::format(Util::detail::FindAllWebAccountsStatusMap.at(val), ctx);
+    }
+};
+
+template<>
+struct std::formatter<WebTokenRequestStatus> : std::formatter<std::string_view>
+{
+    auto format(const WebTokenRequestStatus& val, std::format_context& ctx) const
+    {
+        return std::formatter<std::string_view>::format(Util::detail::WebTokenRequestStatusMap.at(val), ctx);
+    }
+};
+
+template<>
+struct std::formatter<WebTokenRequestPromptType> : std::formatter<std::string_view>
+{
+    auto format(const WebTokenRequestPromptType& val, std::format_context& ctx) const
+    {
+        return std::formatter<std::string_view>::format(Util::detail::WebTokenRequestPromptTypeMap.at(val), ctx);
+    }
+};
 
 namespace Util
 {
