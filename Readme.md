@@ -3,7 +3,7 @@ This is a sample program to get an access token via Windows' Web Account Manager
 The main purpose of this program is to detect & isolate issues at WAM level instead of other programs that depend on WAM such as Microsoft Office clients.  
 
 ## Download
-You can download the latest build from [here](https://github.com/jpmessaging/GetToken/releases/download/v0.3.8/GetToken.zip)
+You can download the latest build from [here](https://github.com/jpmessaging/GetToken/releases/download/v0.4.0/GetToken.zip)
 
 ## Usage
 While you can run this program without any options, this program supports input options to customize the requests for the IdP and progam behavior. You can see available options by using `--help`, `-h`, or `-?`:  
@@ -11,35 +11,39 @@ While you can run this program without any options, this program supports input 
 For example:
 
     C:\>GetToken.exe -?
-    GetToken (version 0.3.7)
+    GetToken (version 0.4.0)
     Available options:
       -h, --help           Show this help message
       -?                   Show this help message
       -v, --version        Show version
       -c, --clientid arg   Client ID. Default: d3590ed6-52b3-4102-aeff-aad2292ab01c
       --scopes arg         Scopes of the token. Default: "https://outlook.office365.com//.default offline_access openid profile"
-      -p, --property arg   Request property (e.g., longin_hint=user01@example.com, prompt=login). Can be used multiple times
+      -p, --property arg   Request property (e.g., wam_compat=2.0, login_hint=user01@example.com, prompt=login). Can be used multiple times
       --showaccounts       Show Web Accounts and exit
+      --showToken          Show Access Token
       --signout            Sign out of Web Accounts
       -t, --tracepath arg  Folder path for a trace file
       -n, --notrace        Disable trace
       -w, --wait           Wait execution until user enters
-    
+
     Note: All options are case insensitive.
-    
+
     Example 1: GetToken.exe
     Run with default configurations
-    
+
     Example 2: GetToken.exe --property login_hint=user01@example.com --property prompt=login --property resource=https://graph.windows.net
     Add the given properties to the request
-    
+
     Example 3: GetToken.exe -p login_hint=user01@example.com -p prompt=login -p resource=https://graph.windows.net
     Same as Example 2, using the short option name -p
-    
-    Example 4: GetToken.exe --scopes open_id profiles
+
+    Example 4: GetToken.exe -p wam_compat=2.0
+    Adding "wam_compat=2.0" gives you JWT (JSON Web Token).
+
+    Example 6: GetToken.exe --scopes open_id profiles
     Use the given scopes for the token
-    
-    Example 5: GetToken.exe --signout
+
+    Example 7: GetToken.exe --signout
     Sign out from all web accounts before making token requests
 
 ## License
