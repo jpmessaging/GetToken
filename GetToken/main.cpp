@@ -20,7 +20,7 @@ auto GetWebTokenRequest(const WebAccountProvider& provider, WebTokenRequestPromp
 auto InvokeRequestTokenAsync(const WebTokenRequest& request, HWND hwnd) -> IAsyncOperation<WebTokenRequestResult>;
 HWND CreateAnchorWindow();
 void PrintWebAccount(const WebAccount& account) noexcept;
-void PrintWebTokenResponse(const WebTokenResponse& response) noexcept;
+void PrintWebTokenResponse(const WebTokenResponse& response, bool showToken = false) noexcept;
 void PrintProviderError(const WebProviderError& error) noexcept;
 
 // Logger writes to both console & trace file
@@ -194,7 +194,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
 
         if (requestStatus == WebTokenRequestStatus::Success)
         {
-            PrintWebTokenResponse(requestResult.ResponseData().GetAt(0));
+            PrintWebTokenResponse(requestResult.ResponseData().GetAt(0), option.ShowToken());
         }
         else
         {
@@ -223,7 +223,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
 
         if (requestStatus == WebTokenRequestStatus::Success)
         {
-            PrintWebTokenResponse(requestResult.ResponseData().GetAt(0));
+            PrintWebTokenResponse(requestResult.ResponseData().GetAt(0), option.ShowToken());
         }
         else
         {
@@ -287,9 +287,15 @@ IAsyncOperation<WebTokenRequestResult> InvokeRequestTokenAsync(const WebTokenReq
     co_return co_await getTokenTask;
 }
 
-void PrintWebTokenResponse(const WebTokenResponse& response) noexcept
+void PrintWebTokenResponse(const WebTokenResponse& response, bool showToken) noexcept
 {
     Logger::WriteLine(L"  WebAccount Id:{}", response.WebAccount().Id());
+
+    if (showToken) 
+    {
+        Console::WriteLine(L"  Token: {}", response.Token());
+    }
+
     Logger::WriteLine("  WebTokenResponse Properties:\n");
 
     for (const auto& [key, value] : response.Properties())
@@ -365,7 +371,7 @@ HWND CreateAnchorWindow()
 
     if (hwnd == NULL)
     {
-        throw std::system_error{ static_cast<int>(GetLastError()), std::system_category(), "CreateWindowExW filed" };
+        throw std::system_error{ static_cast<int>(GetLastError()), std::system_category(), "CreateWindowExW failed" };
     }
 
     return hwnd;
