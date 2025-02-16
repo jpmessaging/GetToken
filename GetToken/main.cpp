@@ -135,6 +135,8 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     /*
     * Find Web Accounts
     */
+    auto webAccounts = std::vector<WebAccount>{};
+
     const auto clientId = option.ClientId().value_or(WAM::ClientId::MSOFFICE);
 
     const auto& findResults = co_await WebAuthenticationCoreManager::FindAllAccountsAsync(provider, clientId);
@@ -164,6 +166,10 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
                 Logger::WriteLine(ConsoleFormat::Warning, "  Signing out from this account ... ");
                 account.SignOutAsync().get();
             }
+            else 
+            {
+                webAccounts.push_back(account);
+            }
         }
     }
     else
@@ -172,7 +178,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         PrintProviderError(findResults.ProviderError());
     }
 
-    if (option.ShowAccounts())
+    if (option.ShowAccountsOnly())
     {
         Trace::Write("Exiting because of ShowAccounts option");
         co_return EXIT_SUCCESS;
@@ -181,34 +187,55 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     /*
     * Request a token
     */
-    try
+    const auto request = GetWebTokenRequest(provider, WebTokenRequestPromptType::Default, option);
+
+    // Invoke GetTokenSilentlyAsync for each Web Account. Even if there's no account, still try GetTokenSilentlyAsync without an account.
     {
-        Logger::WriteLine(ConsoleFormat::Verbose, "Invoking WebAuthenticationCoreManager::GetTokenSilentlyAsync ...");
+        auto done = bool{};
+        auto i = int{};
 
-        const auto request = GetWebTokenRequest(provider, WebTokenRequestPromptType::Default, option);
-
-        const auto& requestResult = co_await WebAuthenticationCoreManager::GetTokenSilentlyAsync(request);
-        const auto requestStatus = requestResult.ResponseStatus();
-
-        Logger::WriteLine("GetTokenSilentlyAsync's ResponseStatus: {}", requestStatus);
-
-        if (requestStatus == WebTokenRequestStatus::Success)
+        while (not done)
         {
-            PrintWebTokenResponse(requestResult.ResponseData().GetAt(0), option.ShowToken());
+            try
+            {
+                auto pResult = std::optional<WebTokenRequestResult>{};
+
+                if (webAccounts.size() == 0)
+                {
+                    Logger::WriteLine(ConsoleFormat::Verbose, "Invoking WebAuthenticationCoreManager::GetTokenSilentlyAsync ...");
+                    pResult = co_await WebAuthenticationCoreManager::GetTokenSilentlyAsync(request);
+                    done = true;
+                }
+                else
+                {
+                    const auto& webAccount = webAccounts[i];
+                    Logger::WriteLine(ConsoleFormat::Verbose, L"Invoking WebAuthenticationCoreManager::GetTokenSilentlyAsync for Web Account {} ...", webAccount.Id());
+                    pResult = co_await WebAuthenticationCoreManager::GetTokenSilentlyAsync(request, webAccount);
+                    done = (++i == webAccounts.size());
+                }
+
+                Logger::WriteLine("GetTokenSilentlyAsync's ResponseStatus: {}", pResult->ResponseStatus());
+
+                if (pResult->ResponseStatus() == WebTokenRequestStatus::Success)
+                {
+                    PrintWebTokenResponse(pResult->ResponseData().GetAt(0), option.ShowToken());
+                }
+                else
+                {
+                    PrintProviderError(pResult->ResponseError());
+                }
+            }
+            catch (const winrt::hresult_error& e)
+            {
+                // https://learn.microsoft.com/en-us/windows/uwp/cpp-and-winrt-apis/error-handling
+                Logger::WriteLine(ConsoleFormat::Error, L"GetTokenSilentlyAsync failed with an exception. code:{:#x}; message:{}", static_cast<std::uint32_t>(e.code()), e.message());
+            }
         }
-        else
-        {
-            PrintProviderError(requestResult.ResponseError());
-        }
-    }
-    catch (const winrt::hresult_error& e)
-    {
-        // https://learn.microsoft.com/en-us/windows/uwp/cpp-and-winrt-apis/error-handling
-        Logger::WriteLine(ConsoleFormat::Error, L"GetTokenSilentlyAsync failed with an exception. code:{:#x}; message:{}", static_cast<std::uint32_t>(e.code()), e.message());
     }
 
     Console::WriteLine("");
 
+    // Invoke RequestTokenAsync (via IWebAuthenticationCoreManagerInterop::RequestTokenForWindowAsync)
     try
     {
         Logger::WriteLine(ConsoleFormat::Verbose, "Invoking WebAuthenticationCoreManager::RequestTokenAsync ...");
@@ -273,18 +300,35 @@ WebTokenRequest GetWebTokenRequest(const WebAccountProvider& provider, const Web
 
 IAsyncOperation<WebTokenRequestResult> InvokeRequestTokenAsync(const WebTokenRequest& request, const HWND hwnd)
 {
+    // Note that WebAuthenticationCoreManager.RequestTokenAsync() cannot be directly called from Win32.
+    // https://learn.microsoft.com/en-us/uwp/api/windows.security.authentication.web.core.webauthenticationcoremanager.requesttokenasync
     // Invoke RequestTokenAsync() via IWebAuthenticationCoreManagerInterop::RequestTokenForWindowAsync()
     // https://devblogs.microsoft.com/oldnewthing/20210805-00/?p=105520
-    auto interop = winrt::get_activation_factory<WebAuthenticationCoreManager, IWebAuthenticationCoreManagerInterop>();
+
+    auto pIWebAuthenticationCoreManagerInterop = winrt::get_activation_factory<WebAuthenticationCoreManager, IWebAuthenticationCoreManagerInterop>();
     auto requestInspectable = static_cast<::IInspectable*>(winrt::get_abi(request));
 
-    auto getTokenTask = winrt::capture<IAsyncOperation<WebTokenRequestResult>>(
-        interop,
+   /*
+    auto asyncOp = IAsyncOperation<WebTokenRequestResult>{};
+
+    auto hr = pIWebAuthenticationCoreManagerInterop->RequestTokenForWindowAsync(
+        hwnd,
+        requestInspectable,
+        winrt::guid_of<IAsyncOperation<WebTokenRequestResult>>(),
+        reinterpret_cast<void**>(&asyncOp)
+    );
+
+    winrt::check_hresult(hr);
+    return asyncOp;
+   */
+
+    auto asyncOp = winrt::capture<IAsyncOperation<WebTokenRequestResult>>(
+        pIWebAuthenticationCoreManagerInterop,
         &IWebAuthenticationCoreManagerInterop::RequestTokenForWindowAsync,
         hwnd,
         requestInspectable);
 
-    co_return co_await getTokenTask;
+    return asyncOp;
 }
 
 void PrintWebTokenResponse(const WebTokenResponse& response, bool showToken) noexcept
@@ -293,7 +337,7 @@ void PrintWebTokenResponse(const WebTokenResponse& response, bool showToken) noe
 
     if (showToken) 
     {
-        Console::WriteLine(L"  Token: {}", response.Token());
+        Console::WriteLine(L"  Token: {}\n", response.Token());
     }
 
     Logger::WriteLine("  WebTokenResponse Properties:\n");

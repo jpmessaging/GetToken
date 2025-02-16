@@ -23,8 +23,8 @@ public:
         m_clientId{ m_parser.add<popl::Value<std::string>>("c", "clientid", std::format("Client ID. Default: {}", Util::to_string(WAM::ClientId::MSOFFICE))) },
         m_scopes{ m_parser.add<popl::Value<std::string>>("", "scopes", std::format(R"(Scopes of the token. Default: "{}")", Util::to_string(WAM::Scopes::DEFAULT_SCOPES))) },
         m_properties{ m_parser.add<popl::Value<std::string>>("p", "property", "Request property (e.g., wam_compat=2.0, login_hint=user01@example.com, prompt=login). Can be used multiple times") },
-        m_showAccounts{ m_parser.add<popl::Switch>("", "showaccounts", "Show Web Accounts and exit") },
-        m_showToken{ m_parser.add<popl::Switch>("", "showToken", "Show Access Token") },
+        m_showAccountsOnly{ m_parser.add<popl::Switch>("", "showaccountsonly", "Show Web Accounts and exit") },
+        m_showToken{ m_parser.add<popl::Switch>("", "showtoken", "Show Access Token") },
         m_signOut{ m_parser.add<popl::Switch>("", "signout", "Sign out of Web Accounts") },
         m_notrace{ m_parser.add<popl::Switch>("n", "notrace", "Disable trace" )},
         m_tracePath{ m_parser.add<popl::Value<std::string>>("t", "tracepath", "Folder path for a trace file") },
@@ -63,9 +63,9 @@ public:
         return m_signOut->value();
     }
 
-    auto ShowAccounts() const noexcept
+    auto ShowAccountsOnly() const noexcept
     {
-        return m_showAccounts->value();
+        return m_showAccountsOnly->value();
     }
 
     auto ShowToken() const noexcept
@@ -211,7 +211,7 @@ private:
     std::shared_ptr<const popl::Value<std::string>> m_scopes;
     std::shared_ptr<const popl::Value<std::string>> m_properties;
 
-    std::shared_ptr<const popl::Switch> m_showAccounts;
+    std::shared_ptr<const popl::Switch> m_showAccountsOnly;
     std::shared_ptr<const popl::Switch> m_showToken;
     std::shared_ptr<const popl::Switch> m_signOut;
     std::shared_ptr<const popl::Value<std::string>> m_tracePath;

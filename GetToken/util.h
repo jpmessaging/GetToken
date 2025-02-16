@@ -235,6 +235,7 @@ namespace Util
             return to_string(name);
         }
 
+        ec = ::GetLastError();
         return std::unexpected{ std::format("GetUserNameExW failed with {:#x}", static_cast<std::uint32_t>(ec)) };
     }
 
