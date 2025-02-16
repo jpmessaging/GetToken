@@ -3,7 +3,7 @@ This is a sample program to get an access token via Windows' Web Account Manager
 The main purpose of this program is to detect & isolate issues at WAM level instead of other programs that depend on WAM such as Microsoft Office clients.  
 
 ## Download
-You can download the latest build from [here](https://github.com/jpmessaging/GetToken/releases/download/v0.4.0/GetToken.zip)
+You can download the latest build from [here](https://github.com/jpmessaging/GetToken/releases/download/v0.4.1/GetToken.zip)
 
 ## Usage
 While you can run this program without any options, this program supports input options to customize the requests for the IdP and progam behavior. You can see available options by using `--help`, `-h`, or `-?`:  
