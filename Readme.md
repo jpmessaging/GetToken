@@ -11,7 +11,7 @@ While you can run this program without any options, this program supports input 
 For example:
 
     C:\>GetToken.exe -?
-    GetToken (version 0.4.1)
+    GetToken (version 0.4.2)
     Available options:
       -h, --help           Show this help message
       -?                   Show this help message

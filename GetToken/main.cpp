@@ -180,20 +180,20 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
 
     if (option.ShowAccountsOnly())
     {
-        Trace::Write("Exiting because of ShowAccounts option");
+        Trace::Write("Exiting because of ShowAccountsOnly option");
         co_return EXIT_SUCCESS;
     }
 
     /*
     * Request a token
     */
-    const auto request = GetWebTokenRequest(provider, WebTokenRequestPromptType::Default, option);
 
     // Invoke GetTokenSilentlyAsync for each Web Account. Even if there's no account, still try GetTokenSilentlyAsync without an account.
     {
         auto done = bool{};
         auto i = int{};
-
+        const auto request = GetWebTokenRequest(provider, WebTokenRequestPromptType::Default, option);
+        
         while (not done)
         {
             try
@@ -230,10 +230,10 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
                 // https://learn.microsoft.com/en-us/windows/uwp/cpp-and-winrt-apis/error-handling
                 Logger::WriteLine(ConsoleFormat::Error, L"GetTokenSilentlyAsync failed with an exception. code:{:#x}; message:{}", static_cast<std::uint32_t>(e.code()), e.message());
             }
+
+            Console::WriteLine("");
         }
     }
-
-    Console::WriteLine("");
 
     // Invoke RequestTokenAsync (via IWebAuthenticationCoreManagerInterop::RequestTokenForWindowAsync)
     try
@@ -451,7 +451,7 @@ void EnableTrace(const Option& option) noexcept
 
         auto fileName = exePath.stem();
         fileName += "_";
-        fileName += std::format(L"{0:%Y%m%d}_{0:%H%M%S}", time_point_cast<seconds>(system_clock::now()));
+        fileName += std::format(L"{0:%F}T{0:%H%M%S}Z", time_point_cast<seconds>(utc_clock::now()));
         fileName.replace_extension(L"log");
 
         path /= fileName;
