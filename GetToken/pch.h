@@ -28,6 +28,8 @@
 #include <numeric>
 #include <optional>
 #include <print>
+#include <ranges>
+#include <regex>
 #include <string>
 #include <string_view>
 #include <system_error>

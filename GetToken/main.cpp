@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 
+#include "base64.h"
 #include "console.h"
 #include "option.h"
 #include "trace.h"
@@ -20,6 +21,7 @@ auto GetWebTokenRequest(const WebAccountProvider& provider, WebTokenRequestPromp
 auto InvokeRequestTokenAsync(const WebTokenRequest& request, HWND hwnd) -> IAsyncOperation<WebTokenRequestResult>;
 HWND CreateAnchorWindow();
 void PrintWebAccount(const WebAccount& account) noexcept;
+void PrintJwt(const std::string& token) noexcept;
 void PrintWebTokenResponse(const WebTokenResponse& response, bool showToken = false) noexcept;
 void PrintProviderError(const WebProviderError& error) noexcept;
 
@@ -132,9 +134,9 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     Logger::WriteLine(R"(  DisplayName: "{}")", Util::to_string(provider.DisplayName()));
     Logger::WriteLine("");
 
-    /*
-    * Find Web Accounts
-    */
+    //
+    // Find Web Accounts
+    //
     auto webAccounts = std::vector<WebAccount>{};
 
     const auto clientId = option.ClientId().value_or(WAM::ClientId::MSOFFICE);
@@ -184,9 +186,9 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         co_return EXIT_SUCCESS;
     }
 
-    /*
-    * Request a token
-    */
+    //
+    // Request a token
+    //
 
     // Invoke GetTokenSilentlyAsync for each Web Account. Even if there's no account, still try GetTokenSilentlyAsync without an account.
     {
@@ -274,8 +276,16 @@ WebTokenRequest GetWebTokenRequest(const WebAccountProvider& provider, const Web
     // If scopes & client IDs are provided, use them.
     const auto clientId = option.ClientId().value_or(WAM::ClientId::MSOFFICE);
     const auto scopes = option.Scopes().value_or(WAM::Scopes::DEFAULT_SCOPES);
-    
+
     auto request = WebTokenRequest{ provider, scopes, clientId, promptType };
+
+    // Add wam_compat=2.0 unless nowamcompat option is specified
+    if (not option.NoWamCompat())
+    {
+        const auto wamCompat = std::wstring{ L"wam_compat" };
+        request.Properties().Insert(wamCompat, L"2.0");
+        Trace::Write(L"'{}=2.0' is implicitly added", wamCompat);
+    }
 
     // Add request properties
     for (const auto& [key, value] : option.Properties())
@@ -289,6 +299,7 @@ WebTokenRequest GetWebTokenRequest(const WebAccountProvider& provider, const Web
     Trace::Write(L"  Scope: '{}'", request.Scope());
     Trace::Write("  PromptType: {}", request.PromptType());
     Trace::Write(L"  CorrelationId: {}", request.CorrelationId());
+
 
     for (auto&& [key, val] : request.Properties())
     {
@@ -333,12 +344,21 @@ IAsyncOperation<WebTokenRequestResult> InvokeRequestTokenAsync(const WebTokenReq
 
 void PrintWebTokenResponse(const WebTokenResponse& response, bool showToken) noexcept
 {
-    Logger::WriteLine(L"  WebAccount Id:{}", response.WebAccount().Id());
+    Logger::WriteLine(L"  WebAccount Id: {}", response.WebAccount().Id());
 
-    if (showToken) 
+    auto token = Util::to_string(response.Token());
+
+    if (showToken)
     {
-        Console::WriteLine(L"  Token: {}\n", response.Token());
+        Console::WriteLine("  Token: {}", token);
     }
+
+    // Print JWT header & payload (noop if token is not JWT)
+    PrintJwt(token);
+
+    // Clear token data from memory
+    ::SecureZeroMemory(data(token), token.length());
+    token.resize(0);
 
     Logger::WriteLine("  WebTokenResponse Properties:\n");
 
@@ -349,6 +369,40 @@ void PrintWebTokenResponse(const WebTokenResponse& response, bool showToken) noe
 
     // Print response's error if any
     PrintProviderError(response.ProviderError());
+}
+
+void PrintJwt(const std::string& token) noexcept
+{
+    // Split JWT token into 3 parts: header, payload, and signature)
+    const auto pattern = std::regex{ R"(\s*[\.]\s*)" };
+
+    auto tokenParts = std::vector<std::string> {
+           std::sregex_token_iterator{cbegin(token), cend(token), pattern, /* tokenization mode*/ -1},
+           std::sregex_token_iterator{}
+    };
+
+    // It's possible that given token is not JWT
+    if (tokenParts.size() != 3)
+    {
+        Trace::Write("Token does not look like a JWT");
+        return;
+    }
+
+    const auto& header = tokenParts[0];
+    const auto& payload = tokenParts[1];
+
+    const auto jsonHeader = Util::decode_base64url(header);
+    const auto jsonPayload = Util::decode_base64url(payload);
+
+    Logger::WriteLine("  JWT Header: {}", jsonHeader);
+    Logger::WriteLine("  JWT Payload: {}", jsonPayload);
+
+    // Clear token data from memory
+    for (auto& part : tokenParts)
+    {
+        ::SecureZeroMemory(data(part), part.length());
+        part.resize(0);
+    }
 }
 
 void PrintProviderError(const WebProviderError& error) noexcept

@@ -22,13 +22,14 @@ public:
         m_version{ m_parser.add<popl::Switch>("v", "version", "Show version") },
         m_clientId{ m_parser.add<popl::Value<std::string>>("c", "clientid", std::format("Client ID. Default: {}", Util::to_string(WAM::ClientId::MSOFFICE))) },
         m_scopes{ m_parser.add<popl::Value<std::string>>("", "scopes", std::format(R"(Scopes of the token. Default: "{}")", Util::to_string(WAM::Scopes::DEFAULT_SCOPES))) },
-        m_properties{ m_parser.add<popl::Value<std::string>>("p", "property", "Request property (e.g., wam_compat=2.0, login_hint=user01@example.com, prompt=login). Can be used multiple times") },
+        m_properties{ m_parser.add<popl::Value<std::string>>("p", "property", "Request property (e.g., login_hint=user01@example.com, prompt=login). Can be used multiple times") },
         m_showAccountsOnly{ m_parser.add<popl::Switch>("", "showaccountsonly", "Show Web Accounts and exit") },
         m_showToken{ m_parser.add<popl::Switch>("", "showtoken", "Show Access Token") },
         m_signOut{ m_parser.add<popl::Switch>("", "signout", "Sign out of Web Accounts") },
         m_notrace{ m_parser.add<popl::Switch>("n", "notrace", "Disable trace" )},
         m_tracePath{ m_parser.add<popl::Value<std::string>>("t", "tracepath", "Folder path for a trace file") },
-        m_wait{ m_parser.add<popl::Switch>("w", "wait", "Wait execution until user enters") }
+        m_wait{ m_parser.add<popl::Switch>("w", "wait", "Wait execution until user enters") },
+        m_noWamCompat{ m_parser.add<popl::Switch>("", "nowamcompat", R"(Do not add "wam_compat=2.0" to WebTokenRequest)")}
     { /* empty */ }
 
     Option(int argc, char** argv) : Option()
@@ -154,6 +155,11 @@ public:
         return m_wait->value();
     }
 
+    bool NoWamCompat() const noexcept
+    {
+        return m_noWamCompat->value();
+    }
+
     std::string GetVersion() const
     {
         static auto ver = []() {
@@ -186,13 +192,10 @@ Add the given properties to the request
 Example 3: {0} -p login_hint=user01@example.com -p prompt=login -p resource=https://graph.windows.net
 Same as Example 2, using the short option name -p
 
-Example 4: {0} -p wam_compat=2.0
-Adding "wam_compat=2.0" gives you JWT (JSON Web Token).
-
-Example 6: {0} --scopes open_id profiles
+Example 4: {0} --scopes open_id profiles
 Use the given scopes for the token
 
-Example 7: {0} --signout
+Example 5: {0} --signout
 Sign out from all web accounts before making token requests
 )", exeName);
 
@@ -217,4 +220,5 @@ private:
     std::shared_ptr<const popl::Value<std::string>> m_tracePath;
     std::shared_ptr<const popl::Switch> m_notrace;
     std::shared_ptr<const popl::Switch> m_wait;
+    std::shared_ptr<const popl::Switch> m_noWamCompat;
 };

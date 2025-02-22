@@ -107,6 +107,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="base64.h" />
     <ClInclude Include="console.h" />
     <ClInclude Include="option.h" />
     <ClInclude Include="pch.h" />

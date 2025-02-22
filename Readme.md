@@ -18,13 +18,14 @@ For example:
       -v, --version        Show version
       -c, --clientid arg   Client ID. Default: d3590ed6-52b3-4102-aeff-aad2292ab01c
       --scopes arg         Scopes of the token. Default: "https://outlook.office365.com//.default offline_access openid profile"
-      -p, --property arg   Request property (e.g., wam_compat=2.0, login_hint=user01@example.com, prompt=login). Can be used multiple times
-      --showaccounts       Show Web Accounts and exit
-      --showToken          Show Access Token
+      -p, --property arg   Request property (e.g., login_hint=user01@example.com, prompt=login). Can be used multiple times
+      --showaccountsonly   Show Web Accounts and exit
+      --showtoken          Show Access Token
       --signout            Sign out of Web Accounts
       -t, --tracepath arg  Folder path for a trace file
       -n, --notrace        Disable trace
       -w, --wait           Wait execution until user enters
+      --nowamcompat        Do not add "wam_compat=2.0" to WebTokenRequest
 
     Note: All options are case insensitive.
 
@@ -37,13 +38,10 @@ For example:
     Example 3: GetToken.exe -p login_hint=user01@example.com -p prompt=login -p resource=https://graph.windows.net
     Same as Example 2, using the short option name -p
 
-    Example 4: GetToken.exe -p wam_compat=2.0
-    Adding "wam_compat=2.0" gives you JWT (JSON Web Token).
-
-    Example 6: GetToken.exe --scopes open_id profiles
+    Example 4: GetToken.exe --scopes open_id profiles
     Use the given scopes for the token
 
-    Example 7: GetToken.exe --signout
+    Example 5: GetToken.exe --signout
     Sign out from all web accounts before making token requests
 
 ## License

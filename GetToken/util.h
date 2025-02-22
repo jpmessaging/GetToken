@@ -6,7 +6,10 @@
 #include <expected>
 #include <format>
 #include <filesystem>
+#include <stdexcept>
 #include <string>
+
+#include "base64.h"
 
 #ifndef WIN32_MEAN_AND_LEAN
 #define WIN32_MEAN_AND_LEAN
@@ -162,6 +165,55 @@ namespace Util
         ::MultiByteToWideChar(CP_ACP, 0, str.data(), static_cast<int>(str.size()), wstr.data(), cch);
 
         return wstr;
+    }
+
+    inline bool equals(std::string_view s1, std::string_view s2)
+    {
+        // string_view is not guaranteed to be null-terminated, 
+        // but it must be null-terminated for _stricmp
+        if (*(data(s1) + s1.length()) != '\0' || *(data(s2) + s2.length()) != '\0')
+        {
+            throw std::invalid_argument{ "input must be null terminated" };
+        }
+
+        return _stricmp(data(s1), data(s2)) == 0;
+    }
+
+    inline bool equals(std::wstring_view s1, std::wstring_view s2)
+    {
+        // wstring_view is not guaranteed to be null-terminated,
+        // but it must be null-terminated for _wcsicmp
+        if (*(data(s1) + s1.length()) != L'\0' || *(data(s2) + s2.length()) != L'\0')
+        {
+            throw std::invalid_argument{ "input must be null terminated" };
+        }
+
+        return _wcsicmp(data(s1), data(s2)) == 0;
+    }
+
+    inline std::string decode_base64url(std::string_view base64url)
+    {
+        auto result = std::string{ base64url };
+
+        std::replace(begin(result), end(result), '-', '+');
+        std::replace(begin(result), end(result), '_', '/');
+
+        switch (base64url.length() % 4)
+        {
+        case 0:
+            break;
+
+        case 2:
+            result += "==";
+            break;
+        case 3:
+            result += "=";
+            break;
+        default:
+            throw std::runtime_error{ "Invalid Base64URL string" };
+        }
+
+        return base64::from_base64(result);
     }
 
     /// <summary>
