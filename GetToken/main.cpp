@@ -21,7 +21,8 @@ auto GetWebTokenRequest(const WebAccountProvider& provider, WebTokenRequestPromp
 auto InvokeRequestTokenAsync(const WebTokenRequest& request, HWND hwnd) -> IAsyncOperation<WebTokenRequestResult>;
 HWND CreateAnchorWindow();
 void PrintWebAccount(const WebAccount& account) noexcept;
-void PrintJwt(const std::string& token) noexcept;
+// void PrintJwt(const std::string& token) noexcept;
+void PrintJwt(std::string_view token) noexcept;
 void PrintWebTokenResponse(const WebTokenResponse& response, bool showToken = false) noexcept;
 void PrintProviderError(const WebProviderError& error) noexcept;
 
@@ -168,7 +169,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
                 Logger::WriteLine(ConsoleFormat::Warning, "  Signing out from this account ... ");
                 account.SignOutAsync().get();
             }
-            else 
+            else
             {
                 webAccounts.push_back(account);
             }
@@ -195,7 +196,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
         auto done = bool{};
         auto i = int{};
         const auto request = GetWebTokenRequest(provider, WebTokenRequestPromptType::Default, option);
-        
+
         while (not done)
         {
             try
@@ -356,10 +357,6 @@ void PrintWebTokenResponse(const WebTokenResponse& response, bool showToken) noe
     // Print JWT header & payload (noop if token is not JWT)
     PrintJwt(token);
 
-    // Clear token data from memory
-    ::SecureZeroMemory(data(token), token.length());
-    token.resize(0);
-
     Logger::WriteLine("  WebTokenResponse Properties:\n");
 
     for (const auto& [key, value] : response.Properties())
@@ -371,17 +368,19 @@ void PrintWebTokenResponse(const WebTokenResponse& response, bool showToken) noe
     PrintProviderError(response.ProviderError());
 }
 
+
+// Not currently used.
 void PrintJwt(const std::string& token) noexcept
 {
-    // Split JWT token into 3 parts: header, payload, and signature)
+    // Split a JWT token into 3 parts: header, payload, and signature
     const auto pattern = std::regex{ R"(\s*[\.]\s*)" };
 
     auto tokenParts = std::vector<std::string> {
-           std::sregex_token_iterator{cbegin(token), cend(token), pattern, /* tokenization mode*/ -1},
+           std::sregex_token_iterator{ cbegin(token), cend(token), pattern, /* tokenization mode*/ -1 },
            std::sregex_token_iterator{}
     };
 
-    // It's possible that given token is not JWT
+    // It's possible that given token is not a JWT
     if (tokenParts.size() != 3)
     {
         Trace::Write("Token does not look like a JWT");
@@ -402,6 +401,47 @@ void PrintJwt(const std::string& token) noexcept
     {
         ::SecureZeroMemory(data(part), part.length());
         part.resize(0);
+    }
+}
+
+void PrintJwt(std::string_view token) noexcept
+{
+    // Split a JWT token into 3 parts: header, payload, and signature
+    auto begin = size_t{};
+    auto tokenParts = std::vector<std::string_view>{};
+
+    while (true)
+    {
+        auto end = token.find('.', begin);
+
+        if (end == std::string_view::npos)
+        {
+            tokenParts.push_back(token.substr(begin));
+            break;
+        }
+
+        tokenParts.push_back(token.substr(begin, end - begin));
+        begin = end + 1;
+    }
+
+    // It's possible that given token is not a JWT
+    if (tokenParts.size() != 3)
+    {
+        Trace::Write("Token does not look like a JWT");
+        return;
+    }
+
+    try
+    {
+        const auto jsonHeader = Util::decode_base64url(tokenParts[0]);
+        const auto jsonPayload = Util::decode_base64url(tokenParts[1]);
+
+        Logger::WriteLine("  JWT Header: {}", jsonHeader);
+        Logger::WriteLine("  JWT Payload: {}", jsonPayload);
+    }
+    catch (const std::exception& ex)
+    {
+        Trace::Write("Fail to decode Base64URL. {}", ex.what());
     }
 }
 

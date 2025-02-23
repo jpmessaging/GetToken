@@ -84,7 +84,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ---
-https://github.com/tobiaslocker/base64/blob/master/LICENSE
+https://github.com/tobiaslocker/base64
 
 MIT License
 
