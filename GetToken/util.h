@@ -167,6 +167,12 @@ namespace Util
         return wstr;
     }
 
+    // Convert multibyte chars (like Shift-JIS) to a UTF-8 string
+    inline std::string to_string(std::string_view str)
+    {
+        return to_string(to_wstring(str));
+    }
+
     inline bool equals(std::string_view s1, std::string_view s2)
     {
         // string_view is not guaranteed to be null-terminated, 

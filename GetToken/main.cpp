@@ -554,7 +554,8 @@ void EnableTrace(const Option& option) noexcept
     }
     catch (const std::exception& e)
     {
-        Console::WriteLine(ConsoleFormat::Error, "Failed to create a trace folder {}. {}", path.string(), e.what());
+        // exception message can be multibyte chars (e.g. Shift-JIS). So explicit conversion with Util::to_string()
+        Console::WriteLine(ConsoleFormat::Error, "Failed to create a trace folder {}. {}", path.string(), Util::to_string(e.what()));
     }
 }
 
