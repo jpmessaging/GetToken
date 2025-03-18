@@ -227,7 +227,7 @@ namespace Util
     /// </summary>
     /// <param name="hModule">module handle. nullptr for current executable.</param>
     /// <returns>std::filesystem::path to the module</returns>
-    inline std::filesystem::path GetModulePath(HMODULE hModule)
+    inline std::filesystem::path GetModulePath(HMODULE hModule = nullptr)
     {
         auto exePath = std::wstring(MAX_PATH, 0);
         auto cch = ::GetModuleFileNameW(hModule, exePath.data(), static_cast<DWORD>(exePath.size()));

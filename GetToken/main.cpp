@@ -529,8 +529,14 @@ void PrintWebAccount(const WebAccount& account) noexcept
 
 void EnableTrace(const Option& option) noexcept
 {
-    auto exePath = Util::GetModulePath(nullptr);
-    auto path = option.TracePath().has_value() ? option.TracePath().value() : exePath.parent_path();
+    auto exePath = Util::GetModulePath();
+    auto path = option.TracePath().value_or(exePath.parent_path());
+
+    if (exePath.empty())
+    {
+        Console::WriteLine(ConsoleFormat::Error, "Failed to enable trace. Cannot find the this executable's path");
+        return;
+    }
 
     try
     {
@@ -554,8 +560,8 @@ void EnableTrace(const Option& option) noexcept
     }
     catch (const std::exception& e)
     {
-        // exception message can be multibyte chars (e.g. Shift-JIS). So explicit conversion with Util::to_string()
-        Console::WriteLine(ConsoleFormat::Error, "Failed to create a trace folder {}. {}", path.string(), Util::to_string(e.what()));
+        // exception message can be multibyte chars (e.g. Shift-JIS). So convert to UTF-8 with Util::to_string().
+        Console::WriteLine(ConsoleFormat::Error, "Failed to enable trace. Failed to create a trace folder {}. {}", path.string(), Util::to_string(e.what()));
     }
 }
 

@@ -146,7 +146,7 @@ namespace Diagnostics::Trace
         return !!detail::_tracer;
     }
 
-    inline void Enable(std::filesystem::path path)
+    inline void Enable(const std::filesystem::path& path)
     {
         using detail::_tracer;
         using detail::CsvTracer;
