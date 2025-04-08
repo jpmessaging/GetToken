@@ -85,6 +85,7 @@ int main(int argc, char** argv)
     }
 
     Trace::Write("{}", option->GetVersion());
+    Trace::Write("Current PID: {0} ({0:#x})", GetCurrentProcessId());
     Trace::Write("CommandLine: {}", GetCommandLineA());
 
     auto currentUser = Util::GetCurrentUserName();
@@ -193,7 +194,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
 
     // Invoke GetTokenSilentlyAsync for each Web Account. Even if there's no account, still try GetTokenSilentlyAsync without an account.
     {
-        auto done = bool{};
+        auto done = false;
         auto i = int{};
         const auto request = GetWebTokenRequest(provider, WebTokenRequestPromptType::Default, option);
 

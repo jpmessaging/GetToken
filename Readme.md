@@ -11,13 +11,13 @@ While you can run this program without any options, this program supports input 
 For example:
 
     C:\>GetToken.exe -?
-    GetToken (version 0.5.2)
+    GetToken (version 0.5.3)
     Available options:
       -h, --help           Show this help message
       -?                   Show this help message
       -v, --version        Show version
       -c, --clientid arg   Client ID. Default: d3590ed6-52b3-4102-aeff-aad2292ab01c
-      --scopes arg         Scopes of the token. Default: "https://outlook.office365.com//.default offline_access openid profile"
+      --scopes arg         Scopes of the token (e.g., "https://outlook.office365.com//.default offline_access openid profile")
       -p, --property arg   Request property (e.g., login_hint=user01@example.com, prompt=login). Can be used multiple times
       --showaccountsonly   Show Web Accounts and exit
       --showtoken          Show Access Token

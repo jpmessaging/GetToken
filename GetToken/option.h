@@ -21,7 +21,7 @@ public:
         m_helpAlias{ m_parser.add<popl::Switch>("?", "", "Show this help message") },
         m_version{ m_parser.add<popl::Switch>("v", "version", "Show version") },
         m_clientId{ m_parser.add<popl::Value<std::string>>("c", "clientid", std::format("Client ID. Default: {}", Util::to_string(WAM::ClientId::MSOFFICE))) },
-        m_scopes{ m_parser.add<popl::Value<std::string>>("", "scopes", std::format(R"(Scopes of the token. Default: "{}")", Util::to_string(WAM::Scopes::DEFAULT_SCOPES))) },
+        m_scopes{ m_parser.add<popl::Value<std::string>>("", "scopes", R"(Scopes of the token (e.g., "https://outlook.office365.com//.default offline_access openid profile"))") },
         m_properties{ m_parser.add<popl::Value<std::string>>("p", "property", "Request property (e.g., login_hint=user01@example.com, prompt=login). Can be used multiple times") },
         m_showAccountsOnly{ m_parser.add<popl::Switch>("", "showaccountsonly", "Show Web Accounts and exit") },
         m_showToken{ m_parser.add<popl::Switch>("", "showtoken", "Show Access Token") },
@@ -117,7 +117,7 @@ public:
 
             for (int i = 0; i < m_properties->count(); ++i)
             {
-                const auto propValue = m_properties->value(i);
+                const auto& propValue = m_properties->value(i);
                 auto pos = propValue.find('=');
 
                 if (pos != std::string::npos)
