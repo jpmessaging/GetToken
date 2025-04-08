@@ -29,7 +29,8 @@ public:
         m_notrace{ m_parser.add<popl::Switch>("n", "notrace", "Disable trace" )},
         m_tracePath{ m_parser.add<popl::Value<std::string>>("t", "tracepath", "Folder path for a trace file") },
         m_wait{ m_parser.add<popl::Switch>("w", "wait", "Wait execution until user enters") },
-        m_noWamCompat{ m_parser.add<popl::Switch>("", "nowamcompat", R"(Do not add "wam_compat=2.0" to WebTokenRequest)")}
+        m_wamCompat{ m_parser.add<popl::Switch>("", "wamcompat", R"(Add "wam_compat=2.0" to WebTokenRequest)")},
+        m_claims { m_parser.add<popl::Switch>("", "claimcapability", R"(Add claims client capability "cp1" to request: claims={"access_token":{"xms_cc":{"values":["cp1"]}}})")}
     { /* empty */ }
 
     Option(int argc, char** argv) : Option()
@@ -51,7 +52,7 @@ public:
 
     auto Help() const noexcept
     {
-        return m_help->value() || m_helpAlias->value(); 
+        return m_help->value() || m_helpAlias->value();
     }
 
     auto Version() const noexcept
@@ -155,9 +156,14 @@ public:
         return m_wait->value();
     }
 
-    bool NoWamCompat() const noexcept
+    bool WamCompat() const noexcept
     {
-        return m_noWamCompat->value();
+        return m_wamCompat->value();
+    }
+
+    bool ClaimCapability() const noexcept
+    {
+        return m_claims->value();
     }
 
     std::string GetVersion() const
@@ -183,19 +189,19 @@ public:
         help += std::format(R"(
 Note: All options are case insensitive.
 
-Example 1: {0}
-Run with default configurations
+Example 1: {0} -p resource=https://outlook.office365.com/
+Run with default configurations for the specified resource
 
-Example 2: {0} --property login_hint=user01@example.com --property prompt=login --property resource=https://graph.windows.net
+Example 2: {0} -p resource=https://outlook.office365.com/ --claimcapability
+Add claim capability to the request
+
+Example 3: {0} -p resource=https://outlook.office365.com/ --claimcapability -p login_hint=user01@example.com -p msafed=0
 Add the given properties to the request
 
-Example 3: {0} -p login_hint=user01@example.com -p prompt=login -p resource=https://graph.windows.net
-Same as Example 2, using the short option name -p
-
-Example 4: {0} --scopes open_id profiles
+Example 4: {0} -p resource=https://outlook.office365.com/ --scopes open_id profiles
 Use the given scopes for the token
 
-Example 5: {0} --signout
+Example 5: {0} -p resource=https://outlook.office365.com/ --signout
 Sign out from all web accounts before making token requests
 )", exeName);
 
@@ -220,5 +226,6 @@ private:
     std::shared_ptr<const popl::Value<std::string>> m_tracePath;
     std::shared_ptr<const popl::Switch> m_notrace;
     std::shared_ptr<const popl::Switch> m_wait;
-    std::shared_ptr<const popl::Switch> m_noWamCompat;
+    std::shared_ptr<const popl::Switch> m_wamCompat;
+    std::shared_ptr<const popl::Switch> m_claims;
 };

@@ -272,21 +272,30 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     }
 }
 
-
 WebTokenRequest GetWebTokenRequest(const WebAccountProvider& provider, const WebTokenRequestPromptType promptType, const Option& option)
 {
     // If scopes & client IDs are provided, use them.
     const auto clientId = option.ClientId().value_or(WAM::ClientId::MSOFFICE);
-    const auto scopes = option.Scopes().value_or(WAM::Scopes::DEFAULT_SCOPES);
+    const auto scopes = option.Scopes().value_or(L"");
 
     auto request = WebTokenRequest{ provider, scopes, clientId, promptType };
 
-    // Add wam_compat=2.0 unless nowamcompat option is specified
-    if (not option.NoWamCompat())
+    // Add wam_compat=2.0 if requested
+    if (option.WamCompat())
     {
         const auto wamCompat = std::wstring{ L"wam_compat" };
         request.Properties().Insert(wamCompat, L"2.0");
-        Trace::Write(L"'{}=2.0' is implicitly added", wamCompat);
+        Trace::Write(L"'{}=2.0' is added", wamCompat);
+    }
+
+    // Add claims with CP1 capability if requested
+    // see: https://learn.microsoft.com/en-us/entra/identity-platform/claims-challenge
+    if (option.ClaimCapability())
+    {
+        const auto claimKey = L"claims";
+        const auto claimValue = LR"({"access_token":{"xms_cc":{"values":["CP1"]}}})";
+        request.Properties().Insert(claimKey, claimValue);
+        Trace::Write(L"{}:{} is added", claimKey, claimValue);
     }
 
     // Add request properties
