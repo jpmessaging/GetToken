@@ -3,7 +3,7 @@ This is a sample program to get an access token via Windows' Web Account Manager
 The main purpose of this program is to detect & isolate issues at WAM level instead of other programs that depend on WAM such as Microsoft Office clients.  
 
 ## Download
-You can download the latest build from [here](https://github.com/jpmessaging/GetToken/releases/download/v0.5.3/GetToken.zip)
+You can download the latest build from [here](https://github.com/jpmessaging/GetToken/releases/download/v0.6.0/GetToken.zip)
 
 ## Usage
 While you can run this program without any options, this program supports input options to customize the requests for the IdP and progam behavior. You can see available options by using `--help`, `-h`, or `-?`:  
@@ -11,7 +11,7 @@ While you can run this program without any options, this program supports input 
 For example:
 
     C:\>GetToken.exe -?
-    GetToken (version 0.5.3)
+    GetToken (version 0.6.0)
     Available options:
       -h, --help           Show this help message
       -?                   Show this help message
@@ -25,23 +25,24 @@ For example:
       -t, --tracepath arg  Folder path for a trace file
       -n, --notrace        Disable trace
       -w, --wait           Wait execution until user enters
-      --nowamcompat        Do not add "wam_compat=2.0" to WebTokenRequest
+      --wamcompat          Add "wam_compat=2.0" to WebTokenRequest
+      --claimcapability    Add claims client capability "cp1" to request: claims={"access_token":{"xms_cc":{"values":["CP1"]}}}
 
     Note: All options are case insensitive.
 
-    Example 1: GetToken.exe
-    Run with default configurations
+    Example 1: GetToken.exe -p resource=https://outlook.office365.com/
+    Run with default configurations for the specified resource
 
-    Example 2: GetToken.exe --property login_hint=user01@example.com --property prompt=login --property resource=https://graph.windows.net
+    Example 2: GetToken.exe -p resource=https://outlook.office365.com/ --claimcapability
+    Add claim capability to the request
+
+    Example 3: GetToken.exe -p resource=https://outlook.office365.com/ --claimcapability -p login_hint=user01@example.com -p msafed=0
     Add the given properties to the request
 
-    Example 3: GetToken.exe -p login_hint=user01@example.com -p prompt=login -p resource=https://graph.windows.net
-    Same as Example 2, using the short option name -p
-
-    Example 4: GetToken.exe --scopes open_id profiles
+    Example 4: GetToken.exe -p resource=https://outlook.office365.com/ --scopes open_id profiles
     Use the given scopes for the token
 
-    Example 5: GetToken.exe --signout
+    Example 5: GetToken.exe -p resource=https://outlook.office365.com/ --signout
     Sign out from all web accounts before making token requests
 
 ## License

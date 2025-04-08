@@ -30,7 +30,7 @@ public:
         m_tracePath{ m_parser.add<popl::Value<std::string>>("t", "tracepath", "Folder path for a trace file") },
         m_wait{ m_parser.add<popl::Switch>("w", "wait", "Wait execution until user enters") },
         m_wamCompat{ m_parser.add<popl::Switch>("", "wamcompat", R"(Add "wam_compat=2.0" to WebTokenRequest)")},
-        m_claims { m_parser.add<popl::Switch>("", "claimcapability", R"(Add claims client capability "cp1" to request: claims={"access_token":{"xms_cc":{"values":["cp1"]}}})")}
+        m_claims { m_parser.add<popl::Switch>("", "claimcapability", R"(Add claims client capability "cp1" to request: claims={"access_token":{"xms_cc":{"values":["CP1"]}}})")}
     { /* empty */ }
 
     Option(int argc, char** argv) : Option()
