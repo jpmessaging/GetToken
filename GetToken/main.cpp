@@ -548,30 +548,38 @@ void EnableTrace(const Option& option) noexcept
         return;
     }
 
-    try
+    // If the path does not exist, create it
+    if (not std::filesystem::exists(path))
     {
-        // If the path does not exist, create it (this may throw)
-        if (not std::filesystem::exists(path))
+        try
         {
+            // This may throw
             std::filesystem::create_directory(path);
         }
+        catch (const std::exception& e)
+        {
+            // exception message can be multibyte chars (e.g. Shift-JIS). So convert to UTF-8 with Util::to_string().
+            Console::WriteLine(ConsoleFormat::Error, R"(Failed to create a trace folder "{}". {})", path.string(), Util::to_string(e.what()));
+        }
+    }
 
-        // Use this executable's name & current time as file name.
-        using namespace std::chrono;
+    // Use this executable's name & current time as file name.
+    using namespace std::chrono;
 
-        auto fileName = exePath.stem();
-        fileName += "_";
-        fileName += std::format(L"{0:%F}T{0:%H%M%S}Z", time_point_cast<seconds>(utc_clock::now()));
-        fileName.replace_extension(L"log");
+    auto fileName = exePath.stem();
+    fileName += "_";
+    fileName += std::format(L"{0:%F}T{0:%H%M%S}Z", time_point_cast<seconds>(utc_clock::now()));
+    fileName.replace_extension(L"csv");
 
-        path /= fileName;
+    path /= fileName;
 
+    try
+    {
         Trace::Enable(path);
     }
     catch (const std::exception& e)
     {
-        // exception message can be multibyte chars (e.g. Shift-JIS). So convert to UTF-8 with Util::to_string().
-        Console::WriteLine(ConsoleFormat::Error, "Failed to enable trace. Failed to create a trace folder {}. {}", path.string(), Util::to_string(e.what()));
+        Console::WriteLine(ConsoleFormat::Error, R"(Failed to enable trace with "{}". {})", Util::to_string(path.c_str()), e.what());
     }
 }
 
