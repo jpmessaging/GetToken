@@ -192,7 +192,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     // Request a token
     //
 
-    // Invoke GetTokenSilentlyAsync for each Web Account. Even if there's no account, still try GetTokenSilentlyAsync without an account.
+    // Invoke GetTokenSilentlyWithWebAccountAsync for each Web Account. Even if there's no account, still try GetTokenSilentlyAsync without an account.
     {
         auto done = false;
         auto i = int{};
@@ -213,7 +213,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
                 else
                 {
                     const auto& webAccount = webAccounts[i];
-                    Logger::WriteLine(ConsoleFormat::Verbose, L"Invoking WebAuthenticationCoreManager::GetTokenSilentlyAsync for Web Account {} ...", webAccount.Id());
+                    Logger::WriteLine(ConsoleFormat::Verbose, L"Invoking WebAuthenticationCoreManager::GetTokenSilentlyWithWebAccountAsync for Web Account {} ...", webAccount.Id());
                     pResult = co_await WebAuthenticationCoreManager::GetTokenSilentlyAsync(request, webAccount);
                     done = (++i == webAccounts.size());
                 }
@@ -580,6 +580,20 @@ void EnableTrace(const Option& option) noexcept
     catch (const std::exception& e)
     {
         Console::WriteLine(ConsoleFormat::Error, R"(Failed to enable trace with "{}". {})", Util::to_string(path.c_str()), e.what());
+
+        // The following is just to help troubleshoot.
+        // Let's see what error is returned when using Win32.
+        const auto fileHandle = ::CreateFileW(path.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+
+        if (fileHandle == INVALID_HANDLE_VALUE)
+        {
+            Console::WriteLine(ConsoleFormat::Error, R"(CreateFileW failed with {:#x})", GetLastError());
+        }
+        else
+        {
+            Console::WriteLine(ConsoleFormat::Error, R"(ofstream failed, but CreateFile() succeeded)");
+            ::CloseHandle(fileHandle);
+        }
     }
 }
 
