@@ -5,6 +5,7 @@
 #include <chrono>
 #include <filesystem>
 #include <future>
+#include <ostream>
 #include <ranges>
 #include <semaphore>
 #include <string>
