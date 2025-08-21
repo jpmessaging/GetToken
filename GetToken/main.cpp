@@ -21,7 +21,6 @@ auto GetWebTokenRequest(const WebAccountProvider& provider, WebTokenRequestPromp
 auto InvokeRequestTokenAsync(const WebTokenRequest& request, HWND hwnd) -> IAsyncOperation<WebTokenRequestResult>;
 HWND CreateAnchorWindow();
 void PrintWebAccount(const WebAccount& account) noexcept;
-// void PrintJwt(const std::string& token) noexcept;
 void PrintJwt(std::string_view token) noexcept;
 void PrintWebTokenResponse(const WebTokenResponse& response, bool showToken = false) noexcept;
 void PrintProviderError(const WebProviderError& error) noexcept;
@@ -568,7 +567,7 @@ void EnableTrace(const Option& option) noexcept
 
     auto fileName = exePath.stem();
     fileName += "_";
-    fileName += std::format(L"{0:%F}T{0:%H%M%S}Z", time_point_cast<seconds>(utc_clock::now()));
+    fileName += std::format(L"{0:%F}T{0:%H%M%S}Z", time_point_cast<seconds>(std::chrono::system_clock::now()));
     fileName.replace_extension(L"csv");
 
     path /= fileName;
