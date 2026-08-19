@@ -139,7 +139,6 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
     // Find Web Accounts
     //
     auto webAccounts = std::vector<WebAccount>{};
-
     const auto clientId = option.ClientId().value_or(WAM::ClientId::MSOFFICE);
 
     const auto& findResults = co_await WebAuthenticationCoreManager::FindAllAccountsAsync(provider, clientId);

@@ -1,23 +1,28 @@
 #pragma once
+#include <string_view>
 
 namespace WAM
 {
+    // Here const whar_t* is used instead of std::wstring_view because const whar_t* can be implicitly convertible to winrt::hstring, 
+    // while std::wstring_view can be converted to winrt::hstring only explicitly.
+    // So raw C-string is easier to work with winrt::hstring.
+
     namespace ClientId
     {
         // Client IDs
         // https://learn.microsoft.com/en-us/troubleshoot/azure/active-directory/verify-first-party-apps-sign-in
         // inline to workaround ODR
-        inline extern constexpr auto MSOFFICE = L"d3590ed6-52b3-4102-aeff-aad2292ab01c";
-        inline extern constexpr auto OFFICE365_EXO = L"00000002-0000-0ff1-ce00-000000000000";
+        inline constexpr auto MSOFFICE = L"d3590ed6-52b3-4102-aeff-aad2292ab01c";
+        inline constexpr auto OFFICE365_EXO = L"00000002-0000-0ff1-ce00-000000000000";
     }
 
     namespace ProviderId
     {
         // Providers & Authority constants
         // https://learn.microsoft.com/en-us/windows/uwp/security/web-account-manager
-        inline extern constexpr auto AAD = L"https://login.windows.net";
-        inline extern const auto LOCAL = L"https://login.windows.local";
-        inline extern const auto MICROSOFT = L"https://login.microsoft.com"; // For Microsoft Account & Azure Active Directory
+        inline constexpr auto  AAD = L"https://login.windows.net";
+        inline constexpr auto LOCAL = L"https://login.windows.local";
+        inline constexpr auto  MICROSOFT = L"https://login.microsoft.com"; // For Microsoft Account & Azure Active Directory
     }
 
     namespace Authority
