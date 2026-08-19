@@ -213,11 +213,16 @@ Add claim capability to the request
 Example 3: {0} -p resource=https://outlook.office365.com/ --claimcapability -p login_hint=user01@example.com -p msafed=0
 Add the given properties to the request
 
-Example 4: {0} -p resource=https://outlook.office365.com/ --scopes open_id profiles
-Use the given scopes for the token
+Example 4: {0} -p resource=https://outlook.office365.com/ --scopes "open_id profiles"
+Use the given scopes for the token request
 
 Example 5: {0} -p resource=https://outlook.office365.com/ --signout
 Sign out from all web accounts before making token requests
+
+Example 6: {0} --authority https://adfs.consoto.com/adfs
+Use on-premises ADFS server
+* You must also configure client accoring to the following article:
+  https://learn.microsoft.com/en-us/exchange/plan-and-deploy/post-installation-tasks/enable-modern-auth-in-exchange-server-on-premises#client-side-modern-authentication-configuration)
 )", exeName);
 
         return help;

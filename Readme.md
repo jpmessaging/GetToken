@@ -11,12 +11,13 @@ While you can run this program without any options, this program supports input 
 For example:
 
     C:\>GetToken.exe -?
-    GetToken (version 0.6.1)
+    GetToken (version 0.6.3)
     Available options:
       -h, --help           Show this help message
       -?                   Show this help message
       -v, --version        Show version
       -c, --clientid arg   Client ID. Default: d3590ed6-52b3-4102-aeff-aad2292ab01c
+      -a, --authority arg  Authority, Default: organizations
       --scopes arg         Scopes of the token (e.g., "https://outlook.office365.com//.default offline_access openid profile")
       -p, --property arg   Request property (e.g., login_hint=user01@example.com, prompt=login). Can be used multiple times
       --showaccountsonly   Show Web Accounts and exit
@@ -39,11 +40,16 @@ For example:
     Example 3: GetToken.exe -p resource=https://outlook.office365.com/ --claimcapability -p login_hint=user01@example.com -p msafed=0
     Add the given properties to the request
 
-    Example 4: GetToken.exe -p resource=https://outlook.office365.com/ --scopes open_id profiles
-    Use the given scopes for the token
+    Example 4: GetToken.exe -p resource=https://outlook.office365.com/ --scopes "open_id profiles"
+    Use the given scopes for the token request
 
     Example 5: GetToken.exe -p resource=https://outlook.office365.com/ --signout
     Sign out from all web accounts before making token requests
+
+    Example 6: GetToken.exe --authority https://adfs.consoto.com/adfs
+    Use on-premises ADFS server
+    * You must also configure client accoring to the following article:
+      https://learn.microsoft.com/en-us/exchange/plan-and-deploy/post-installation-tasks/enable-modern-auth-in-exchange-server-on-premises#client-side-modern-authentication-configuration)
 
 ## License
 Copyright (c) 2024 Ryusuke Fujita
