@@ -21,6 +21,7 @@ public:
         m_helpAlias{ m_parser.add<popl::Switch>("?", "", "Show this help message") },
         m_version{ m_parser.add<popl::Switch>("v", "version", "Show version") },
         m_clientId{ m_parser.add<popl::Value<std::string>>("c", "clientid", std::format("Client ID. Default: {}", Util::to_string(WAM::ClientId::MSOFFICE))) },
+        m_authority{ m_parser.add<popl::Value<std::string>>("a", "authority", std::format("Authority, Default: {}", Util::to_string(WAM::Authority::ORGANIZATION))) },
         m_scopes{ m_parser.add<popl::Value<std::string>>("", "scopes", R"(Scopes of the token (e.g., "https://outlook.office365.com//.default offline_access openid profile"))") },
         m_properties{ m_parser.add<popl::Value<std::string>>("p", "property", "Request property (e.g., login_hint=user01@example.com, prompt=login). Can be used multiple times") },
         m_showAccountsOnly{ m_parser.add<popl::Switch>("", "showaccountsonly", "Show Web Accounts and exit") },
@@ -91,6 +92,20 @@ public:
 
             return std::nullopt;
         }();
+
+        return value;
+    }
+
+    const std::optional<winrt::hstring>& Authority() const noexcept
+    {
+        static auto value = [this]() -> std::optional<winrt::hstring> {
+            if (m_authority->is_set())
+            {
+                return winrt::to_hstring(m_authority->value());
+            }
+
+            return std::nullopt;
+            }();
 
         return value;
     }
@@ -217,6 +232,7 @@ private:
     std::shared_ptr<const popl::Switch> m_version;
 
     std::shared_ptr<const popl::Value<std::string>> m_clientId;
+    std::shared_ptr<const popl::Value<std::string>> m_authority;
     std::shared_ptr<const popl::Value<std::string>> m_scopes;
     std::shared_ptr<const popl::Value<std::string>> m_properties;
 

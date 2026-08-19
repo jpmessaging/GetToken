@@ -122,17 +122,19 @@ int main(int argc, char** argv)
 
 IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
 {
-    const auto& provider = co_await WebAuthenticationCoreManager::FindAccountProviderAsync(WAM::ProviderId::MICROSOFT, WAM::Authority::ORGANIZATION);
+    const auto authority = option.Authority() ? *option.Authority() : WAM::Authority::ORGANIZATION;
+    const auto& provider = co_await WebAuthenticationCoreManager::FindAccountProviderAsync(WAM::ProviderId::MICROSOFT, authority);
 
     if (not provider)
     {
-        Logger::WriteLine(ConsoleFormat::Error, LR"(FindAccountProviderAsync failed to find Provider "{}")", WAM::ProviderId::MICROSOFT);
+        Logger::WriteLine(ConsoleFormat::Error, LR"(FindAccountProviderAsync failed to find Provider "{}" with Authority: {})", WAM::ProviderId::MICROSOFT, authority);
         co_return EXIT_FAILURE;
     }
 
     Logger::WriteLine("Provider:");
-    Logger::WriteLine(L"  ID: {}", provider.Id());
-    Logger::WriteLine(R"(  DisplayName: "{}")", Util::to_string(provider.DisplayName()));
+    Logger::WriteLine(L"  ID          : {}", provider.Id());
+    Logger::WriteLine(L"  DisplayName : {}", provider.DisplayName());
+    Logger::WriteLine(L"  Authority   : {}", provider.Authority());
     Logger::WriteLine("");
 
     //
@@ -231,6 +233,7 @@ IAsyncOperation<int> MainAsync(const Option& option, const HWND hwnd)
             {
                 // https://learn.microsoft.com/en-us/windows/uwp/cpp-and-winrt-apis/error-handling
                 Logger::WriteLine(ConsoleFormat::Error, L"GetTokenSilentlyAsync failed with an exception. code:{:#x}; message:{}", static_cast<std::uint32_t>(e.code()), e.message());
+                done = true;
             }
 
             Console::WriteLine("");
@@ -308,7 +311,6 @@ WebTokenRequest GetWebTokenRequest(const WebAccountProvider& provider, const Web
     Trace::Write(L"  Scope: '{}'", request.Scope());
     Trace::Write("  PromptType: {}", request.PromptType());
     Trace::Write(L"  CorrelationId: {}", request.CorrelationId());
-
 
     for (auto&& [key, val] : request.Properties())
     {
